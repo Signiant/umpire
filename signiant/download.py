@@ -18,8 +18,10 @@ optionally verify the md5. Remote md5 files MUST have the same file path with
 
 """
 
-import sys, os, urllib
+import sys, os, urllib2, requests
+from multiprocessing import Value
 from maestro.internal.module import *
+from maestro.tools.file import read_blocks
 
 SOURCE_URI_KEYS = ["s", "source"]
 DESTINATION_URI_KEYS = ["d", "destination"]
@@ -37,8 +39,14 @@ class DownloadModule(AsyncModule):
     # Required ID of this module
     id = "download"
     
+    #Initialize shm value
+    progress = Value('d', 0.0)
+
     # Required help text
     help_text = HELPTEXT
+
+    #Default block size
+    block_size = 8192
 
     source_url = None
     dest_path = None
@@ -49,15 +57,15 @@ class DownloadModule(AsyncModule):
 
     def run(self,kwargs):
         #Catch all exceptions since we need to set self.exception
-        #try:
-        self.__parse_kwargs__(kwargs)
-        self.__verify_arguments__()
-        self.__download__()
-        if verify_md5 is True:
-            self.__verify_md5__()
-        #except Exception as e:
-        #    self.exception = e
-        #    raise e
+        try:
+            self.__parse_kwargs__(kwargs)
+            self.__verify_arguments__()
+            self.__download__()
+            if self.verify_md5 is True:
+                self.__verify_md5__()
+        except Exception as e:
+            return e
+        return True
 
     def __parse_kwargs__(self,kwargs):
         for key, val in kwargs.iteritems():
@@ -94,18 +102,28 @@ class DownloadModule(AsyncModule):
             return False
 
     def __download__(self):
-        print self.dest_path
-        print self.dest_filename
-        urllib.urlretrieve(self.source_url, os.path.join(self.dest_path,self.dest_filename), reporthook=self.__progress__)
+        response = requests.get(self.source_url, stream=True)
+        if response.headers["content-type"] != 'application/octet-stream':
+            pass #Possibly do something with the headers in the future, for now binary!
+        try:
+            total_size = int(response.headers["Content-Length"])
+        except KeyError:
+            total_size = -1
+            self.progress.value = -1.0
+
+
+        with open(os.path.join(self.dest_path, self.dest_filename), "wb") as file:
+            bytes_read = 0
+            for data in response.iter_content(chunk_size=self.block_size):
+                bytes_read += self.block_size
+                file.write(data)
+                if total_size > 0:
+                    self.progress.value = float(bytes_read) / float(total_size) * 100
         if not os.path.exists(os.path.join(self.dest_path, self.dest_filename)):
             raise DownloadError("The file failed to download.")
             
-    def __progress__(self,count, blockSize, totalSize):
-          percent = int(count*blockSize*100/totalSize)
-          sys.stdout.write("\r" + "progress" + "...%d%%" % percent)
-          sys.stdout.flush()
-
 if __name__ == "__main__":
+    import time
     current_key = None
     keyvals = dict()
     for arg in sys.argv[1:]:
@@ -120,6 +138,14 @@ if __name__ == "__main__":
             current_key = arg.lstrip('-')
     if current_key is not None and current_key not in keyvals.keys():
         keyvals[current_key] = ""
-    print keyvals
+    static_dl = DownloadModule(None)
+    #static_dl.run(keyvals)
     dl = DownloadModule(None)
-    dl.run(keyvals)
+    dl.start(keyvals)
+    while dl.status != DONE:
+        if dl.exception is not None:
+            raise dl.exception
+        print "Progress: " + str(dl.progress.value)
+        time.sleep(1)
+    if dl.exception is not None:
+        raise dl.exception
