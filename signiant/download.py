@@ -55,6 +55,10 @@ class DownloadModule(AsyncModule):
     dest_filename = None
     verify_md5 = False
 
+    def help(self):
+        print self.help_text
+        exit(0)
+
     def run(self,kwargs):
         #Catch all exceptions since we need to set self.exception
         try:
@@ -69,7 +73,9 @@ class DownloadModule(AsyncModule):
 
     def __parse_kwargs__(self,kwargs):
         for key, val in kwargs.iteritems():
-            if key in SOURCE_URI_KEYS:
+            if key in HELP_KEYS:
+                self.help()
+            elif key in SOURCE_URI_KEYS:
                 self.source_url = val
             elif key in DESTINATION_URI_KEYS:
                 self.dest_url = val
