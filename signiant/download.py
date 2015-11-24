@@ -1,5 +1,7 @@
-"""download.py contains all download logic for depres, and can be considered
-   the link between the client (depres) and the server (s3)."""
+"""download.py contains a versatile asynchronous downloader"""
+
+#TODO move to maestro and merge with s3downloader (make this the parent)
+#TODO remove name and make destination behave like s3
 
 HELPTEXT = """
                   ----- Download Module -----
@@ -41,9 +43,6 @@ class DownloadModule(AsyncModule):
     
     #Initialize shm value
     progress = Value('d', 0.0)
-
-    # Required help text
-    help_text = HELPTEXT
 
     #Default block size
     block_size = 8192
