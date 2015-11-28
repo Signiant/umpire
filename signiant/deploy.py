@@ -9,11 +9,11 @@ Usage: deploy.py <deployment_file>
 
 """
 
-import sys, os, urllib2, requests
-from multiprocessing import Value
+import sys, os, json
 from maestro.internal import module
 from maestro.aws import s3
 
+#Local modules
 import unpack
 
 HELP_KEYS = ["h", "help"]
@@ -33,7 +33,7 @@ class DeploymentModule(module.AsyncModule):
         with open(sys.argv[1]) as f:
             data = json.load(f)
 
-        downloaders = list()
+        fetchers = list()
 
         for repo in data:
             repo_url = repo["url"]
@@ -44,6 +44,7 @@ class DeploymentModule(module.AsyncModule):
                 destination = item["destination"]
 
                 full_url = s3.join_s3_url(repo_url, platform, name, version)
+                
                 downloader = s3.AsyncS3Downloader(None)
                 downloader.source_url = full_url
                 downloader.destination_path = destination
