@@ -96,6 +96,8 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
         pass
 
     def __parse_kwargs__(self,kwargs):
+        if kwargs is None:
+            return
         for key, val in kwargs.iteritems():
             if key in CACHE_LOCATION_KEYS:
                 self.cache_location = val
