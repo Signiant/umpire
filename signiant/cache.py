@@ -2,9 +2,12 @@
 repo.py contains code to control the local cache for umpire. It is not a module.
 """
 
-import os, shutil
+import os, shutil, time
 import ConfigParser
+import maestro.tools.path
+import maestro.internal.module
 from urlparse import urlparse
+from unpack import UnpackModule
 
 CONFIG_FILENAME = ".umpire"
 CONFIG_REPO_SECTION_NAME = "umpire"
@@ -114,10 +117,9 @@ def write_entry(entry):
         config.set(CONFIG_ENTRY_SECTION_NAME, "name", entry.name)
         config.set(CONFIG_ENTRY_SECTION_NAME, "platform", entry.platform)
         config.set(CONFIG_ENTRY_SECTION_NAME, "version", entry.version)
-        config.set(CONFIG_ENTRY_SECTION_NAME, "path", entry.path)
         config.set(CONFIG_ENTRY_SECTION_NAME, "config_version", CURRENT_ENTRY_CONFIG_VERSION)
 
-        with open(os.path.join(entry_info.path, CONFIG_FILENAME), "w+") as f:
+        with open(os.path.join(entry.path, CONFIG_FILENAME), "w+") as f:
             return config.write(f)
 
 class EntryInfo(object):
@@ -194,8 +196,8 @@ class LocalCache(object):
             raise CacheError("Unable to determine the version of this cache: " + self.local_path)
 
     #Gets EntryInfo object, returns None if it doesn't exist.
-    def get(platform, name, version):
-        cs_entry_file = os.path.join(local_path, platform, name, version)
+    def get(self, platform, name, version):
+        cs_entry_file = os.path.join(self.local_path, platform, name, version)
         entry_file = maestro.tools.path.get_case_insensitive_path(cs_entry_file)
 
         if entry_file is None:
@@ -211,7 +213,7 @@ class LocalCache(object):
         pass #TODO: Future
         
     #Puts an archive of files into the cache 
-    def put(archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
+    def put(self,archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
         full_path = os.path.join(self.local_path, platform, name, version)
         case_insensitive_path = maestro.tools.path.get_case_insensitive_path(full_path)
 
@@ -220,13 +222,29 @@ class LocalCache(object):
             raise EntryError("Entry already exists under: " + case_insensitive_path + ". Please delete this entry, or enable force overwriting.")
         #Otherwise delete it
         elif case_insensitive_path is not None and force is True:
-            import shutil
             shutil.rmtree(case_insensitive_path)
-s
+
         try:
             os.makedirs(full_path)
         except OSError as e:
             raise CacheError("Unknown error in creating cache entry: " + str(e))
+        
+        #Copy archive to cache location
+        shutil.copy(archive_path, full_path)
+
+        #Remove original if we want
+        if keep_original is False:
+            os.remove(archive_path)
+
+        unpacker = UnpackModule(None)
+       
+       #Unpack if necessary 
+        if unpack is True:
+            unpacker.destination_path = full_path
+            unpacker.file_path = os.path.join(full_path, os.path.split(archive_path)[1])
+            unpacker.delete_archive = not keep_archive
+            unpacker.start()
+            print "Unpacking " + os.path.split(archive_path)[1] + "..."
 
         entry = EntryInfo()
         entry.name = name
@@ -238,18 +256,13 @@ s
         write_entry(entry)
 
         #Lock the newly written entry
-        entry.lock()
-
-        #Copy archive to cache location
-        shutil.copy(archive_path, entry.path)
-
-        #Remove original if we want
-        if keep_original is False:
-            os.remove(archive_path)
+        self.lock(entry)
 
         if unpack is True:
-
-
+            while unpacker.status == maestro.internal.module.RUNNING:
+                time.sleep(0.2)
+                if unpacker.exception is not None:
+                    raise unpacker.exception
 
 
         
@@ -261,6 +274,8 @@ s
 if __name__ == "__main__":
     try:
         cache = create_local_cache("./test", "s3://bucketname")
-        cache.put
+        cache.put("../../poco-1.4.6p2-win64.tar.gz", "win64","poco","1.4.6p2", keep_original = True)
+        cache.get("win64","poco","1.4.6p2")
     finally:
+        #pass
         shutil.rmtree("./test")

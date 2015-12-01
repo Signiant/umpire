@@ -35,6 +35,3 @@ class UnpackModule(module.AsyncModule):
         except Exception as e:
             return e
 
-if __name__ == "__main__":
-    dp = DeploymentModule(None)
-    dp.run(None)
