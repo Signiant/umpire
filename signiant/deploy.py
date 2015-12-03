@@ -11,20 +11,32 @@ Usage: deploy.py <deployment_file>
 
 import sys, os, json
 from maestro.internal import module
-from maestro.aws import s3
+from maestro.tools import path
 
 #Local modules
-import unpack
+import fetch, cache
+from cache import CacheError
 
 HELP_KEYS = ["h", "help"]
+    
+#TODO: Settings file from setup.py
+def get_cache_root():
+    hardcoded_root = "/Users/mcorner/umpire/cache"
+    if not os.path.exists(hardcoded_root):
+        os.makedirs(hardcoded_root)
+    return hardcoded_root
 
 class DeploymentModule(module.AsyncModule):
     # Required ID of this module
     id = "deploy"
 
+    #Set to true to view tracebacks for exceptions
+    DEBUG = False
+
     def help(self):
         print self.help_text
         exit(0)
+
 
     def run(self,kwargs):
         import json, time
@@ -43,47 +55,51 @@ class DeploymentModule(module.AsyncModule):
                 platform = item["platform"]
                 destination = item["destination"]
 
-                full_url = s3.join_s3_url(repo_url, platform, name, version)
-                
-                downloader = s3.AsyncS3Downloader(None)
-                downloader.source_url = full_url
-                downloader.destination_path = destination
-                print "Downloading " + full_url
-                downloader.start(None)
-                downloaders.append(downloader)
+                fetcher = fetch.FetchModule(None)
+                fetcher.dependency_name = name
+                fetcher.dependency_version = version
+                fetcher.dependency_platform = platform
+                fetcher.dependency_repo = repo_url
+                fetcher.cache_root = get_cache_root()
 
-        unpacker_count = 0
-        unpackers = list()
+                #TODO: Figure out how to move this out of deploy
+                try:
+                    cache_dir =  os.path.join(fetcher.cache_root, fetcher.get_cache_name())
+                    cache.create_local_cache(cache_dir, repo_url)
+                except CacheError:
+                    pass #Cache already exists
+                fetcher.start()
+                fetchers.append((fetcher,destination))
 
-        downloader_count = 0
-        while downloader_count < len(downloaders):
-            downloader_count = 0
-            for downloader in downloaders:
-                if downloader.status == module.DONE:
-                    for item in downloader.result:
-                        if item.endswith(".tar.gz"):
-                            unpacker = unpack.UnpackModule(None)
-                            unpacker.file_path = item
-                            unpacker.destination_path = os.path.split(item)[0]
-                            unpacker.delete_archive = True
-                            print "Unpacking " + item
-                            unpacker.start(None)
-                            unpackers.append(unpacker)
-                            downloader.status = 123
-                if downloader.status == 123:
-                    downloader_count += 1
-            time.sleep(0.1)
+        done_count = 0
+        while done_count < len(fetchers):
+            done_count = 0
+            for fetcher, destination in fetchers:
+                if not os.path.exists(destination):
+                    os.makedirs(destination)
+                if fetcher.status == module.DONE:
+                    #Check for an exception, raise the full trace if in debug
+                    if fetcher.exception is not None:
+                        if self.DEBUG:
+                            raise fetcher.exception
+                        else:
+                            print fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception)
+                        #TODO: Kinda hacky, no significance other than to make it not DONE
+                        fetcher.status = -22
 
-        while unpacker_count < len(downloaders):
-            unpacker_count = 0
-            for unpacker in unpackers:
-                if unpacker.exception is not None:
-                    print "Error in unpacker: " + str(unpacker.exception)
-                if unpacker.status == module.DONE:
-                    unpacker_count += 1
-            time.sleep(0.1)
-            
-        print "Done!"
+                    for entry in fetcher.result:
+                        destination_file = os.path.join(destination,os.path.split(entry)[1])
+                        if os.path.exists(destination_file) or os.path.islink(destination_file):
+                            print fetcher.format_entry_name() + ": Already deployed."
+                            fetcher.status = -22
+                            break
+                        print fetcher.format_entry_name() + ": Linking " + destination_file
+                        path.symlink(entry, destination_file)
+                        #TODO: Kinda hacky, no significance other than to make it not DONE
+                        fetcher.status = -22
+
+                if fetcher.status == -22:
+                    done_count += 1
 
 if __name__ == "__main__":
     dp = DeploymentModule(None)
