@@ -119,7 +119,7 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
             return [os.path.abspath(os.path.join(entry.path,f)) for f in os.listdir(entry.path) if f != ".umpire"]
 
         except Exception as e:
-            return Exception("".join(traceback.format_excetion(*sys.exc_info())))
+            return Exception("".join(traceback.format_exception(*sys.exc_info())))
 
     def format_entry_name(self):
         return str(self.dependency_platform) + "/" + str(self.dependency_name) + " v" + str(self.dependency_version)
