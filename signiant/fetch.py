@@ -90,7 +90,7 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
                 
                 #Set Downloader arguments
                 downloader.source_url = full_url
-                downloader.destination_path = os.path.join(self.cache_root, "downloading/")
+                downloader.destination_path = os.path.join(self.cache_root, "downloading") + os.sep
                 downloader.start()
 
                 #Wait for downloader to finish #TODO: Do something with the reported progress
@@ -116,7 +116,7 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
                 if entry is None:
                     raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")
             #Entry is not None, return all the files listed in the entry that aren't the configuration files
-            return [os.path.abspath(os.path.join("./",f)) for f in os.listdir(entry.path) if f != ".umpire"]
+            return [os.path.abspath(os.path.join(entry.path,f)) for f in os.listdir(entry.path) if f != ".umpire"]
 
         except Exception as e:
             return Exception("".join(traceback.format_excetion(*sys.exc_info())))
