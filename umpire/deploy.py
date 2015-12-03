@@ -1,11 +1,11 @@
 """deploy.py"""
 
 HELPTEXT = """
-                  ----- Deploy Module -----
+                  ----- Umpire -----
 
-The deploy module reads a deployment JSON file.
+The deploy module reads an umpire deployent JSON file.
 
-Usage: deploy.py <deployment_file>
+Usage: umpire <deployment_file>
 
 """
 
@@ -16,15 +16,22 @@ from maestro.tools import path
 #Local modules
 import fetch, cache
 from cache import CacheError
+from config import default_cache_location
 
 HELP_KEYS = ["h", "help"]
     
 #TODO: Settings file from setup.py
 def get_cache_root():
-    hardcoded_root = "/Users/mcorner/umpire/cache"
-    if not os.path.exists(hardcoded_root):
-        os.makedirs(hardcoded_root)
-    return hardcoded_root
+    hardcoded_root = "./cache"
+    try:
+        if not os.path.exists(default_cache_location):
+            os.makedirs(default_cache_location)
+        return default_cache_location
+    except Exception as e:
+        print "Error creating default cache location, using local directory './cache': " + str(e) 
+        if not os.path.exists(hardcoded_root):
+            os.makedirs(hardcoded_root)
+        return hardcoded_root
 
 class DeploymentModule(module.AsyncModule):
     # Required ID of this module
@@ -41,9 +48,13 @@ class DeploymentModule(module.AsyncModule):
     def run(self,kwargs):
         import json, time
         data = None
-
-        with open(sys.argv[1]) as f:
-            data = json.load(f)
+        
+        try:
+            with open(sys.argv[1]) as f:
+                data = json.load(f)
+        except:
+            print HELPTEXT
+            sys.exit(1)
 
         fetchers = list()
 

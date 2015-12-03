@@ -1,0 +1,19 @@
+[
+  {
+    "url":"s3://thirdpartydependencies/",
+    "items":[
+	      {
+	        "name":"zlib",
+	        "version":"1.2.8",
+	        "platform":"win64",
+	        "destination":"./test/zlib/"
+	      },
+	      {
+		"name":"swigwin",
+		"version":"3.0.2",
+		"platform":"win64",
+		"destination":"./test/swigwin/"
+	      }
+	    ]
+  }
+]
