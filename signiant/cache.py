@@ -1,6 +1,8 @@
 """
 repo.py contains code to control the local cache for umpire. It is not a module.
 """
+#TODO: Add support for zip, tbz/tar.bz 
+#TODO: Write command line module
 
 import os, shutil, time
 import ConfigParser
@@ -160,7 +162,7 @@ class LocalCache(object):
         self.settings_file = os.path.join(cache_root,CONFIG_FILENAME)
 
         if not os.path.exists(self.settings_file):
-            raise CacheError("The specified path does not appear to be a valid umpire cache")
+            raise CacheError("The path '" + str(cache_root) + "' does not appear to be a valid umpire cache")
         config = None
         
         #Get parser
@@ -197,9 +199,8 @@ class LocalCache(object):
 
     #Gets EntryInfo object, returns None if it doesn't exist.
     def get(self, platform, name, version):
-        cs_entry_file = os.path.join(self.local_path, platform, name, version)
-        entry_file = maestro.tools.path.get_case_insensitive_path(cs_entry_file)
-
+        cs_entry_file = os.path.join(self.local_path, platform, name, version, ".umpire")
+        entry_file = maestro.tools.path.get_case_insensitive_path(path=cs_entry_file)
         if entry_file is None:
             return None
         else:
@@ -214,23 +215,30 @@ class LocalCache(object):
         
     #Puts an archive of files into the cache 
     def put(self,archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
-        full_path = os.path.join(self.local_path, platform, name, version)
-        case_insensitive_path = maestro.tools.path.get_case_insensitive_path(full_path)
+
+        #Get Archive filename
+        archive_filename = os.path.split(archive_path)[1]
+
+        #Get path it would exist in the repo
+        full_path = os.path.join(self.local_path, platform, name, version, archive_filename)
+        entry_root = os.path.join(self.local_path, platform, name, version)
+        case_insensitive_path = maestro.tools.path.get_case_insensitive_path(entry_root)
 
         #If file exists, and we're not force deleting it throw an error
+        #TODO: modified for md5 additions, this will be obsolete
         if case_insensitive_path is not None and force is False:
-            raise EntryError("Entry already exists under: " + case_insensitive_path + ". Please delete this entry, or enable force overwriting.")
+            raise EntryError("Entry archive already exists under: " + case_insensitive_path + ". Please delete this entry, or enable force overwriting.")
         #Otherwise delete it
         elif case_insensitive_path is not None and force is True:
-            shutil.rmtree(case_insensitive_path)
+            os.remove(case_insensitive_path)
 
         try:
-            os.makedirs(full_path)
+            os.makedirs(entry_root)
         except OSError as e:
             raise CacheError("Unknown error in creating cache entry: " + str(e))
         
         #Copy archive to cache location
-        shutil.copy(archive_path, full_path)
+        shutil.copy(archive_path, entry_root)
 
         #Remove original if we want
         if keep_original is False:
@@ -240,30 +248,26 @@ class LocalCache(object):
        
        #Unpack if necessary 
         if unpack is True:
-            unpacker.destination_path = full_path
-            unpacker.file_path = os.path.join(full_path, os.path.split(archive_path)[1])
+            unpacker.destination_path = entry_root
+            unpacker.file_path = full_path
             unpacker.delete_archive = not keep_archive
             unpacker.start()
-            print "Unpacking " + os.path.split(archive_path)[1] + "..."
 
         entry = EntryInfo()
         entry.name = name
         entry.version = version
         entry.platform = platform
-        entry.path = full_path
-
+        entry.path = entry_root
         #Write the entry
         write_entry(entry)
-
         #Lock the newly written entry
         self.lock(entry)
-
         if unpack is True:
-            while unpacker.status == maestro.internal.module.RUNNING:
+            while unpacker.status != maestro.internal.module.DONE:
                 time.sleep(0.2)
-                if unpacker.exception is not None:
-                    raise unpacker.exception
-
+                
+            if unpacker.exception is not None:
+                raise unpacker.exception
 
         
     #Set the repositories remote URL (updates local .umpire_repo file)
@@ -271,6 +275,7 @@ class LocalCache(object):
         pass #TODO: Future
 
 
+#TODO: Write command line module
 if __name__ == "__main__":
     try:
         cache = create_local_cache("./test", "s3://bucketname")
