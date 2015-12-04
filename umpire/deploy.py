@@ -1,11 +1,11 @@
 """deploy.py"""
 
 HELPTEXT = """
-                  ----- Deploy Module -----
+                  ----- Umpire -----
 
-The deploy module reads a deployment JSON file.
+The deploy module reads an umpire deployent JSON file.
 
-Usage: deploy.py <deployment_file>
+Usage: umpire <deployment_file>
 
 """
 
@@ -16,15 +16,25 @@ from maestro.tools import path
 #Local modules
 import fetch, cache
 from cache import CacheError
+from config import default_cache_location
 
 HELP_KEYS = ["h", "help"]
     
 #TODO: Settings file from setup.py
 def get_cache_root():
-    hardcoded_root = "/Users/mcorner/umpire/cache"
-    if not os.path.exists(hardcoded_root):
-        os.makedirs(hardcoded_root)
-    return hardcoded_root
+    hardcoded_root = "./cache"
+    try:
+        if not os.path.exists(default_cache_location):
+            os.makedirs(default_cache_location)
+        return default_cache_location
+    except Exception as e:
+        print "Error creating default cache location, using local directory './cache': " + str(e) 
+        if not os.path.exists(hardcoded_root):
+            os.makedirs(hardcoded_root)
+        return hardcoded_root
+
+class DeploymentError(Exception):
+    pass
 
 class DeploymentModule(module.AsyncModule):
     # Required ID of this module
@@ -39,11 +49,14 @@ class DeploymentModule(module.AsyncModule):
 
 
     def run(self,kwargs):
-        import json, time
-        data = None
-
-        with open(sys.argv[1]) as f:
-            data = json.load(f)
+        try:
+            with open(sys.argv[1]) as f:
+                data = json.load(f)
+        except IndexError:
+            print HELPTEXT
+            sys.exit(1)
+        except IOError:
+            raise DeploymentError("Unable to locate file: " + sys.argv[1])
 
         fetchers = list()
 
@@ -77,26 +90,30 @@ class DeploymentModule(module.AsyncModule):
             for fetcher, destination in fetchers:
                 if not os.path.exists(destination):
                     os.makedirs(destination)
-                if fetcher.status == module.DONE:
+                if fetcher.exception is not None:
+                    if self.DEBUG:
+                        raise fetcher.exception
+                    else:
+                        print fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception)
+                    fetcher.status = -22
+                if fetcher.status == module.DONE and fetcher.exception is None:
                     #Check for an exception, raise the full trace if in debug
-                    if fetcher.exception is not None:
-                        if self.DEBUG:
-                            raise fetcher.exception
-                        else:
-                            print fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception)
-                        #TODO: Kinda hacky, no significance other than to make it not DONE
-                        fetcher.status = -22
-
                     for entry in fetcher.result:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
                         if os.path.exists(destination_file) or os.path.islink(destination_file):
                             print fetcher.format_entry_name() + ": Already deployed."
                             fetcher.status = -22
-                            break
-                        print fetcher.format_entry_name() + ": Linking " + destination_file
-                        path.symlink(entry, destination_file)
-                        #TODO: Kinda hacky, no significance other than to make it not DONE
-                        fetcher.status = -22
+
+                        for entry in fetcher.result:
+                            destination_file = os.path.join(destination,os.path.split(entry)[1])
+                            if os.path.exists(destination_file) or os.path.islink(destination_file):
+                                print fetcher.format_entry_name() + ": Already deployed."
+                                fetcher.status = -22
+                                break
+                            print fetcher.format_entry_name() + ": Linking " + destination_file
+                            path.symlink(entry, destination_file)
+                            #TODO: Kinda hacky, no significance other than to make it not DONE
+                            fetcher.status = -22
 
                 if fetcher.status == -22:
                     done_count += 1
