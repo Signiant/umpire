@@ -3,7 +3,7 @@
 HELPTEXT = """
                   ----- Umpire -----
 
-The deploy module reads an umpire deployent JSON file.
+The deploy module reads an umpire deployment JSON file.
 
 Usage: umpire <deployment_file>
 
@@ -49,14 +49,27 @@ class DeploymentModule(module.AsyncModule):
 
 
     def run(self,kwargs):
+        json_index = 1
         try:
-            with open(sys.argv[1]) as f:
+            for index, item in enumerate(sys.argv):
+                if index == 0:
+                    continue
+                if item == "-d" or item == "--debug":
+                    self.DEBUG = True
+                else:
+                    json_index = index
+            
+            with open(sys.argv[json_index]) as f:
                 data = json.load(f)
         except IndexError:
-            print HELPTEXT
+            print(HELPTEXT)
             sys.exit(1)
-        except IOError:
-            raise DeploymentError("Unable to locate file: " + sys.argv[1])
+        except IOError as e:
+            if not self.DEBUG:
+                print("Unable to locate file: " + sys.argv[json_index])
+            else:
+                raise e
+            sys.exit(1)
 
         fetchers = list()
 
@@ -85,6 +98,7 @@ class DeploymentModule(module.AsyncModule):
                 fetchers.append((fetcher,destination))
 
         done_count = 0
+        exit_code = 0
         while done_count < len(fetchers):
             done_count = 0
             for fetcher, destination in fetchers:
@@ -92,32 +106,30 @@ class DeploymentModule(module.AsyncModule):
                     os.makedirs(destination)
                 if fetcher.exception is not None:
                     if self.DEBUG:
-                        raise fetcher.exception
+                        print fetcher.exception.traceback
                     else:
                         print fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception)
-                    fetcher.status = -22
+                    exit_code = 1
+                    fetcher.status = module.PROCESSED
                 if fetcher.status == module.DONE and fetcher.exception is None:
                     #Check for an exception, raise the full trace if in debug
                     for entry in fetcher.result:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
                         if os.path.exists(destination_file) or os.path.islink(destination_file):
                             print fetcher.format_entry_name() + ": Already deployed."
-                            fetcher.status = -22
+                            fetcher.status = module.PROCESSED
+                            break
+                        print fetcher.format_entry_name() + ": Linking " + destination_file
+                        path.symlink(entry, destination_file)
+                            
+                        #TODO: Kinda hacky, no significance other than to make it not DONE
+                        fetcher.status = module.PROCESSED
 
-                        for entry in fetcher.result:
-                            destination_file = os.path.join(destination,os.path.split(entry)[1])
-                            if os.path.exists(destination_file) or os.path.islink(destination_file):
-                                print fetcher.format_entry_name() + ": Already deployed."
-                                fetcher.status = -22
-                                break
-                            print fetcher.format_entry_name() + ": Linking " + destination_file
-                            path.symlink(entry, destination_file)
-                            #TODO: Kinda hacky, no significance other than to make it not DONE
-                            fetcher.status = -22
-
-                if fetcher.status == -22:
+                if fetcher.status == module.PROCESSED:
                     done_count += 1
+        return exit_code
 
-if __name__ == "__main__":
+def entry():
     dp = DeploymentModule(None)
-    dp.run(None)
+    exit_code = dp.run(None)
+    sys.exit(exit_code)

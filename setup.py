@@ -10,5 +10,9 @@ setup(name='Umpire',
       packages=find_packages(),
       license='MIT',
       install_requires=['MaestroOps>=0.2.2'],
-      scripts=['scripts/umpire']
+      entry_points = {
+          'console_scripts': [
+              'umpire = umpire.deploy:entry'
+              ]
+          }
      )
