@@ -3,7 +3,7 @@
 HELPTEXT = """
                   ----- Umpire -----
 
-The deploy module reads an umpire deployent JSON file.
+The deploy module reads an umpire deployment JSON file.
 
 Usage: umpire <deployment_file>
 
@@ -95,29 +95,29 @@ class DeploymentModule(module.AsyncModule):
                         raise fetcher.exception
                     else:
                         print fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception)
-                    fetcher.status = -22
+                    fetcher.status = module.PROCESSED
                 if fetcher.status == module.DONE and fetcher.exception is None:
                     #Check for an exception, raise the full trace if in debug
                     for entry in fetcher.result:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
                         if os.path.exists(destination_file) or os.path.islink(destination_file):
                             print fetcher.format_entry_name() + ": Already deployed."
-                            fetcher.status = -22
+                            fetcher.status = module.PROCESSED
 
                         for entry in fetcher.result:
                             destination_file = os.path.join(destination,os.path.split(entry)[1])
                             if os.path.exists(destination_file) or os.path.islink(destination_file):
                                 print fetcher.format_entry_name() + ": Already deployed."
-                                fetcher.status = -22
+                                fetcher.status = module.PROCESSED
                                 break
                             print fetcher.format_entry_name() + ": Linking " + destination_file
                             path.symlink(entry, destination_file)
                             #TODO: Kinda hacky, no significance other than to make it not DONE
-                            fetcher.status = -22
+                            fetcher.status = module.PROCESSED
 
-                if fetcher.status == -22:
+                if fetcher.status == module.PROCESSED:
                     done_count += 1
 
-if __name__ == "__main__":
+def entry():
     dp = DeploymentModule(None)
     dp.run(None)
