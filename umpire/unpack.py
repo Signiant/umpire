@@ -26,12 +26,9 @@ class UnpackModule(module.AsyncModule):
         exit(0)
 
     def run(self,kwargs):
-        try:
-            import tarfile
-            with tarfile.open(self.file_path, "r:gz") as f:
-                f.extractall(self.destination_path)
-            if self.delete_archive is True:
-                os.remove(self.file_path)
-        except Exception as e:
-            return e
+        import tarfile
+        with tarfile.open(self.file_path, "r:gz") as f:
+            f.extractall(self.destination_path)
+        if self.delete_archive is True:
+            os.remove(self.file_path)
 
