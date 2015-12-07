@@ -7,7 +7,7 @@ repo.py contains code to control the local cache for umpire. It is not a module.
 import os, shutil, time
 import ConfigParser
 import maestro.tools.path
-import maestro.internal.module
+import maestro.core.module
 from urlparse import urlparse
 from unpack import UnpackModule
 
@@ -263,7 +263,7 @@ class LocalCache(object):
         #Lock the newly written entry
         self.lock(entry)
         if unpack is True:
-            while unpacker.status != maestro.internal.module.DONE:
+            while unpacker.status != maestro.core.module.DONE:
                 time.sleep(0.2)
                 
             if unpacker.exception is not None:

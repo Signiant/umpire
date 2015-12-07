@@ -10,7 +10,7 @@ Usage: Currently N/A
 """
 
 import sys, os
-from maestro.internal import module
+from maestro.core import module
 
 HELP_KEYS = ["h", "help"]
 
