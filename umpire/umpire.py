@@ -2,7 +2,7 @@ from __future__ import print_function
 from maestro.core import execute
 from maestro.aws import s3
 
-import sys
+import sys,os
 
 #Internal Modules
 from . import fetch, unpack, deploy
@@ -16,8 +16,10 @@ def entry():
     sys.exit(exit_code)
 
 class Umpire(execute.ModuleExecuter):
-
-    #Register all the dependencies of this program here.
+    
+    #
+    # !!!Register all the dependencies of this program here.!!!
+    #
     def register_dependencies(self):
         self.register(s3.AsyncS3Downloader())
         self.register(fetch.FetchModule())
@@ -38,13 +40,13 @@ class Umpire(execute.ModuleExecuter):
 
 
     def get_cache_root(self):
-        hardcoded_root = "./cache"
+        hardcoded_root = "./umpirecache_tmp"
         try:
             if not os.path.exists(config.default_cache_location):
-                os.makedirs(default_cache_location)
+                os.makedirs(config.default_cache_location)
             return config.default_cache_location
         except Exception as e:
-            print("Umpire: Error creating default cache location, using local directory './cache': " + str(e), file=sys.stderr)
+            print("Umpire: Error creating default cache location, using local directory './umpirecache_tmp': " + str(e), file=sys.stderr)
             if not os.path.exists(hardcoded_root):
                 os.makedirs(hardcoded_root)
             return hardcoded_root
