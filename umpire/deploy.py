@@ -10,35 +10,24 @@ Usage: umpire <deployment_file>
 """
 
 import sys, os, json
-from maestro.internal import module
+from maestro.core import module
 from maestro.tools import path
 
 #Local modules
 import fetch, cache
 from cache import CacheError
-from config import default_cache_location
 
 HELP_KEYS = ["h", "help"]
     
-#TODO: Settings file from setup.py
-def get_cache_root():
-    hardcoded_root = "./cache"
-    try:
-        if not os.path.exists(default_cache_location):
-            os.makedirs(default_cache_location)
-        return default_cache_location
-    except Exception as e:
-        print "Error creating default cache location, using local directory './cache': " + str(e) 
-        if not os.path.exists(hardcoded_root):
-            os.makedirs(hardcoded_root)
-        return hardcoded_root
-
 class DeploymentError(Exception):
     pass
 
 class DeploymentModule(module.AsyncModule):
     # Required ID of this module
     id = "deploy"
+
+    #Cache Root
+    cache_root = None
 
     #Set to true to view tracebacks for exceptions
     DEBUG = False
@@ -86,7 +75,7 @@ class DeploymentModule(module.AsyncModule):
                 fetcher.dependency_version = version
                 fetcher.dependency_platform = platform
                 fetcher.dependency_repo = repo_url
-                fetcher.cache_root = get_cache_root()
+                fetcher.cache_root = self.cache_root
 
                 #TODO: Figure out how to move this out of deploy
                 try:
@@ -129,7 +118,3 @@ class DeploymentModule(module.AsyncModule):
                     done_count += 1
         return exit_code
 
-def entry():
-    dp = DeploymentModule(None)
-    exit_code = dp.run(None)
-    sys.exit(exit_code)

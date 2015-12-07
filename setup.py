@@ -12,7 +12,7 @@ setup(name='Umpire',
       install_requires=['MaestroOps>=0.2.2'],
       entry_points = {
           'console_scripts': [
-              'umpire = umpire.deploy:entry'
+              'umpire = umpire.umpire:entry'
               ]
           }
      )

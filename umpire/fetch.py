@@ -3,7 +3,7 @@
 import sys, os, urllib, time, traceback
 from cache import LocalCache
 from multiprocessing import Value
-from maestro.internal import module
+from maestro.core import module
 from maestro.aws import s3
 
 CACHE_LOCATION_KEYS = ["c", "cache-location"]
