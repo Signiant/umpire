@@ -6,7 +6,7 @@
 		"name":"swigwin",
 		"version":"3.0.2",
 		"platform":"win64",
-		"destination":"./test/siawd"
+		"destination":"./test/swigwin"
 	      }
 	    ]
   }
