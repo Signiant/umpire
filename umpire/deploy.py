@@ -18,7 +18,7 @@ import fetch, cache
 from cache import CacheError
 
 HELP_KEYS = ["h", "help"]
-    
+
 class DeploymentError(Exception):
     pass
 
@@ -33,7 +33,7 @@ class DeploymentModule(module.AsyncModule):
     DEBUG = False
 
     def help(self):
-        print self.help_text
+        print(self.help_text)
         exit(0)
 
 
@@ -47,7 +47,7 @@ class DeploymentModule(module.AsyncModule):
                     self.DEBUG = True
                 else:
                     json_index = index
-            
+
             with open(sys.argv[json_index]) as f:
                 data = json.load(f)
         except IndexError:
@@ -95,9 +95,9 @@ class DeploymentModule(module.AsyncModule):
                     os.makedirs(destination)
                 if fetcher.exception is not None:
                     if self.DEBUG:
-                        print fetcher.exception.traceback
+                        print (fetcher.exception.traceback)
                     else:
-                        print fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception)
+                        print (fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception))
                     exit_code = 1
                     fetcher.status = module.PROCESSED
                 if fetcher.status == module.DONE and fetcher.exception is None:
@@ -105,16 +105,15 @@ class DeploymentModule(module.AsyncModule):
                     for entry in fetcher.result:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
                         if os.path.exists(destination_file) or os.path.islink(destination_file):
-                            print fetcher.format_entry_name() + ": Already deployed."
+                            print (fetcher.format_entry_name() + ": Already deployed.")
                             fetcher.status = module.PROCESSED
                             break
-                        print fetcher.format_entry_name() + ": Linking " + destination_file
+                        print (fetcher.format_entry_name() + ": Linking " + destination_file)
                         path.symlink(entry, destination_file)
-                            
+
                         #TODO: Kinda hacky, no significance other than to make it not DONE
                         fetcher.status = module.PROCESSED
 
                 if fetcher.status == module.PROCESSED:
                     done_count += 1
         return exit_code
-
