@@ -3,35 +3,21 @@
 HELPTEXT = """
                   ----- Umpire -----
 
-The deploy module reads an umpire deployent JSON file.
+The deploy module reads an umpire deployment JSON file.
 
 Usage: umpire <deployment_file>
 
 """
 
 import sys, os, json
-from maestro.internal import module
+from maestro.core import module
 from maestro.tools import path
 
 #Local modules
 import fetch, cache
 from cache import CacheError
-from config import default_cache_location
 
 HELP_KEYS = ["h", "help"]
-    
-#TODO: Settings file from setup.py
-def get_cache_root():
-    hardcoded_root = "./cache"
-    try:
-        if not os.path.exists(default_cache_location):
-            os.makedirs(default_cache_location)
-        return default_cache_location
-    except Exception as e:
-        print "Error creating default cache location, using local directory './cache': " + str(e) 
-        if not os.path.exists(hardcoded_root):
-            os.makedirs(hardcoded_root)
-        return hardcoded_root
 
 class DeploymentError(Exception):
     pass
@@ -40,23 +26,39 @@ class DeploymentModule(module.AsyncModule):
     # Required ID of this module
     id = "deploy"
 
+    #Cache Root
+    cache_root = None
+
     #Set to true to view tracebacks for exceptions
     DEBUG = False
 
     def help(self):
-        print self.help_text
+        print(self.help_text)
         exit(0)
 
 
     def run(self,kwargs):
+        json_index = 1
         try:
-            with open(sys.argv[1]) as f:
+            for index, item in enumerate(sys.argv):
+                if index == 0:
+                    continue
+                if item == "-d" or item == "--debug":
+                    self.DEBUG = True
+                else:
+                    json_index = index
+
+            with open(sys.argv[json_index]) as f:
                 data = json.load(f)
         except IndexError:
-            print HELPTEXT
+            print(HELPTEXT)
             sys.exit(1)
-        except IOError:
-            raise DeploymentError("Unable to locate file: " + sys.argv[1])
+        except IOError as e:
+            if not self.DEBUG:
+                print("Unable to locate file: " + sys.argv[json_index])
+            else:
+                raise e
+            sys.exit(1)
 
         fetchers = list()
 
@@ -73,7 +75,7 @@ class DeploymentModule(module.AsyncModule):
                 fetcher.dependency_version = version
                 fetcher.dependency_platform = platform
                 fetcher.dependency_repo = repo_url
-                fetcher.cache_root = get_cache_root()
+                fetcher.cache_root = self.cache_root
 
                 #TODO: Figure out how to move this out of deploy
                 try:
@@ -85,6 +87,7 @@ class DeploymentModule(module.AsyncModule):
                 fetchers.append((fetcher,destination))
 
         done_count = 0
+        exit_code = 0
         while done_count < len(fetchers):
             done_count = 0
             for fetcher, destination in fetchers:
@@ -92,32 +95,25 @@ class DeploymentModule(module.AsyncModule):
                     os.makedirs(destination)
                 if fetcher.exception is not None:
                     if self.DEBUG:
-                        raise fetcher.exception
+                        print (fetcher.exception.traceback)
                     else:
-                        print fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception)
-                    fetcher.status = -22
+                        print (fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception))
+                    exit_code = 1
+                    fetcher.status = module.PROCESSED
                 if fetcher.status == module.DONE and fetcher.exception is None:
                     #Check for an exception, raise the full trace if in debug
                     for entry in fetcher.result:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
                         if os.path.exists(destination_file) or os.path.islink(destination_file):
-                            print fetcher.format_entry_name() + ": Already deployed."
-                            fetcher.status = -22
+                            print (fetcher.format_entry_name() + ": Already deployed.")
+                            fetcher.status = module.PROCESSED
+                            break
+                        print (fetcher.format_entry_name() + ": Linking " + destination_file)
+                        path.symlink(entry, destination_file)
 
-                        for entry in fetcher.result:
-                            destination_file = os.path.join(destination,os.path.split(entry)[1])
-                            if os.path.exists(destination_file) or os.path.islink(destination_file):
-                                print fetcher.format_entry_name() + ": Already deployed."
-                                fetcher.status = -22
-                                break
-                            print fetcher.format_entry_name() + ": Linking " + destination_file
-                            path.symlink(entry, destination_file)
-                            #TODO: Kinda hacky, no significance other than to make it not DONE
-                            fetcher.status = -22
+                        #TODO: Kinda hacky, no significance other than to make it not DONE
+                        fetcher.status = module.PROCESSED
 
-                if fetcher.status == -22:
+                if fetcher.status == module.PROCESSED:
                     done_count += 1
-
-if __name__ == "__main__":
-    dp = DeploymentModule(None)
-    dp.run(None)
+        return exit_code

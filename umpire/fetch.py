@@ -1,10 +1,9 @@
 """fetch.py"""
 
-
 import sys, os, urllib, time, traceback
 from cache import LocalCache
 from multiprocessing import Value
-from maestro.internal import module
+from maestro.core import module
 from maestro.aws import s3
 
 CACHE_LOCATION_KEYS = ["c", "cache-location"]
@@ -22,7 +21,7 @@ class FetchModule(module.AsyncModule):
     HELPTEXT = """
                   ----- Fetch Module -----
 
-The fetch module locates a "package" using arbitrary identifiers. It will return a local directory. 
+The fetch module locates a "package" using arbitrary identifiers. It will return a local directory.
 
 -c, --cache-root <path>:        Specify the local root cache directory (must exist)
                                     (required)
@@ -39,7 +38,7 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
 
     # Required ID of this module
     id = "fetch"
-    
+
     #Initialize shm value #TODO: Near future
     progress = Value('d', 0.0)
 
@@ -60,66 +59,62 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
     dependency_repo = None
 
     def run(self,kwargs):
-        #Catch all exceptions since we need to return the exception
-        try:
-            if kwargs is not None:
-                pass #TODO: Near future
+        if kwargs is not None:
+            pass #TODO: Near future
 
-            #Verify argument validity
-            self.__verify_arguments__()
+        #Verify argument validity
+        self.__verify_arguments__()
 
-            #Get cache name from remote url
-            cache_name = self.get_cache_name()
+        #Get cache name from remote url
+        cache_name = self.get_cache_name()
 
-            #Get cache path
-            cache_path = os.path.join(self.cache_root, cache_name)
+        #Get cache path
+        cache_path = os.path.join(self.cache_root, cache_name)
 
-            #Get cache object (will raise an exception if it doesn't exist)
-            cache = LocalCache(cache_path)
+        #Get cache object (will raise an exception if it doesn't exist)
+        cache = LocalCache(cache_path)
 
-            #Try to get entry from cache
+        #Try to get entry from cache
+        entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
+
+        if entry is None:
+            print (self.format_entry_name() + ": Not in cache")
+            full_url = s3.join_s3_url(self.dependency_repo, self.dependency_platform, self.dependency_name, self.dependency_version)
+
+            print (self.format_entry_name() + ": Downloading " + full_url)
+
+            #Get Downloader
+            downloader = s3.AsyncS3Downloader(None)
+
+            #Set Downloader arguments
+            downloader.source_url = full_url
+            downloader.destination_path = os.path.join(self.cache_root, "downloading") + os.sep
+            downloader.start()
+
+            #Wait for downloader to finish #TODO: Do something with the reported progress
+            while downloader.status != module.DONE:
+                time.sleep(0.5)
+
+            #Check for an exception, if so bubble it up
+            if downloader.exception is not None:
+                raise downloader.exception
+
+            print self.format_entry_name() + ": Download complete"
+
+            if downloader.result is None or len(downloader.result) == 0:
+                raise EntryError(self.format_entry_name() + ": Unable to find remote entry '" + full_url + "'")
+
+            #Iterate of the result (downloaded files)
+            for item in downloader.result:
+                #TODO: MD5 verification
+                print (self.format_entry_name() + ": Unpacking...")
+                cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version)
             entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
             if entry is None:
-                print self.format_entry_name() + ": Not in cache"
-                full_url = s3.join_s3_url(self.dependency_repo, self.dependency_platform, self.dependency_name, self.dependency_version)
-                
-                print self.format_entry_name() + ": Downloading " + full_url
+                raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")
+        #Entry is not None, return all the files listed in the entry that aren't the configuration files
+        return [os.path.abspath(os.path.join(entry.path,f)) for f in os.listdir(entry.path) if f != ".umpire"]
 
-                #Get Downloader
-                downloader = s3.AsyncS3Downloader(None)
-                
-                #Set Downloader arguments
-                downloader.source_url = full_url
-                downloader.destination_path = os.path.join(self.cache_root, "downloading") + os.sep
-                downloader.start()
-
-                #Wait for downloader to finish #TODO: Do something with the reported progress
-                while downloader.status != module.DONE:
-                    time.sleep(0.5)
-
-                #Check for an exception, if so bubble it up
-                if downloader.exception is not None:
-                    raise downloader.exception
-
-                print self.format_entry_name() + ": Download complete"
-
-                if downloader.result is None or len(downloader.result) == 0:
-                    raise EntryError(self.format_entry_name() + ": Unable to find remote entry '" + full_url + "'")
-
-                #Iterate of the result (downloaded files)
-                for item in downloader.result:
-                    #TODO: MD5 verification
-                    if item.endswith(".tar.gz"):
-                        print self.format_entry_name() + ": Unpacking..."
-                        cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version)
-                entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
-                if entry is None:
-                    raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")
-            #Entry is not None, return all the files listed in the entry that aren't the configuration files
-            return [os.path.abspath(os.path.join(entry.path,f)) for f in os.listdir(entry.path) if f != ".umpire"]
-
-        except Exception as e:
-            return Exception("".join(traceback.format_exception(*sys.exc_info())))
 
     def format_entry_name(self):
         return str(self.dependency_platform) + "/" + str(self.dependency_name) + " v" + str(self.dependency_version)
@@ -128,7 +123,7 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
         if not self.dependency_repo:
             raise ValueError("You must specify a valid repository URL.")
         if not self.dependency_name:
-            raise ValueError("You must specify a valid name for the dependency.") 
+            raise ValueError("You must specify a valid name for the dependency.")
         if not self.dependency_platform:
             raise ValueError("You must specify a valid platform for the dependency.")
         if not self.dependency_version:
@@ -158,7 +153,7 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
 
 if __name__ == "__main__":
     from cache import create_local_cache
-    
+
     remote_url = "s3://thirdpartydependencies/"
     create_local_cache("./test_cache/thirdpartydependencies.s3", remote_url)
     fetcher = FetchModule(None)
@@ -173,7 +168,7 @@ if __name__ == "__main__":
         time.sleep(0.5)
 
     if fetcher.exception is not None:
-        print str(fetcher.exception)
+        print (str(fetcher.exception))
     for item in fetcher.result:
-        print item
-    print "Done!"
+        print (item)
+    print ("Done!")

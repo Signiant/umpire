@@ -5,8 +5,8 @@
 	      {
 		"name":"swigwin",
 		"version":"3.0.2",
-		"platform":"win65",
-		"destination":"./test/siawd"
+		"platform":"win64",
+		"destination":"./test/swigwin"
 	      }
 	    ]
   }
