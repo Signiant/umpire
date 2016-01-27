@@ -9,7 +9,7 @@ Usage: umpire <deployment_file>
 
 """
 
-import sys, os, json
+import sys, os, json, time
 from maestro.core import module
 from maestro.tools import path
 
@@ -17,6 +17,7 @@ from maestro.tools import path
 import fetch, cache
 from cache import CacheError
 
+CACHE_ROOT_KEYS = ["c", "with-cache"]
 HELP_KEYS = ["h", "help"]
 
 class DeploymentError(Exception):
@@ -35,7 +36,6 @@ class DeploymentModule(module.AsyncModule):
     def help(self):
         print(self.help_text)
         exit(0)
-
 
     def run(self,kwargs):
         json_index = 1
@@ -91,9 +91,12 @@ class DeploymentModule(module.AsyncModule):
         while done_count < len(fetchers):
             done_count = 0
             for fetcher, destination in fetchers:
+                if fetcher.status == module.PROCESSED:
+                    done_count += 1
+                    continue
                 if not os.path.exists(destination):
                     os.makedirs(destination)
-                if fetcher.exception is not None:
+                if fetcher.status == module.DONE and fetcher.exception is not None:
                     if self.DEBUG:
                         print (fetcher.exception.traceback)
                     else:
@@ -101,19 +104,30 @@ class DeploymentModule(module.AsyncModule):
                     exit_code = 1
                     fetcher.status = module.PROCESSED
                 if fetcher.status == module.DONE and fetcher.exception is None:
-                    #Check for an exception, raise the full trace if in debug
-                    for entry in fetcher.result:
+                    files = fetcher.result[0]
+                    state = fetcher.result[1]
+                    for entry in files:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
-                        if os.path.exists(destination_file) or os.path.islink(destination_file):
-                            print (fetcher.format_entry_name() + ": Already deployed.")
+                        if (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.CACHE:
+                            print (fetcher.format_entry_name() + ": Already deployed at latest.")
                             fetcher.status = module.PROCESSED
                             break
-                        print (fetcher.format_entry_name() + ": Linking " + destination_file)
-                        path.symlink(entry, destination_file)
+                        elif (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.DOWNLOADED:
+                            print (fetcher.format_entry_name() + ": Re-deploying " + destination_file)
+                            os.remove(destination_file)
+                            path.symlink(entry, destination_file)
+                        elif (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.UPDATED:
+                            print (fetcher.format_entry_name() + ": Updating " + destination_file)
+                            os.remove(destination_file)
+                            path.symlink(entry, destination_file)
+                        else:
+                            print (fetcher.format_entry_name() + ": Linking " + destination_file)
+                            path.symlink(entry, destination_file)
 
                         #TODO: Kinda hacky, no significance other than to make it not DONE
                         fetcher.status = module.PROCESSED
 
                 if fetcher.status == module.PROCESSED:
                     done_count += 1
+            time.sleep(0.1)
         return exit_code

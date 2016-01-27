@@ -13,6 +13,11 @@ DEPENDENCY_REPOSITORY_KEYS = ["r", "repository"]
 DEPENDENCY_VERSION_KEYS = ["v", "version"]
 HELP_KEYS = ["h", "help"]
 
+class EntryState(object):
+    CACHE = 0
+    DOWNLOADED = 1
+    UPDATED = 2
+
 class EntryError(Exception):
     pass
 
@@ -74,8 +79,15 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
         #Get cache object (will raise an exception if it doesn't exist)
         cache = LocalCache(cache_path)
 
+        cache.lock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
         #Try to get entry from cache
         entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
+
+        #Set state
+        if entry is None:
+            state = EntryState.DOWNLOADED
+        else:
+            state = EntryState.CACHE
 
         if entry is None:
             print (self.format_entry_name() + ": Not in cache")
@@ -108,12 +120,14 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
             for item in downloader.result:
                 #TODO: MD5 verification
                 print (self.format_entry_name() + ": Unpacking...")
+                #Put will unlock
                 cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version)
             entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
             if entry is None:
                 raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")
+        cache.unlock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
         #Entry is not None, return all the files listed in the entry that aren't the configuration files
-        return [os.path.abspath(os.path.join(entry.path,f)) for f in os.listdir(entry.path) if f != ".umpire"]
+        return [os.path.abspath(os.path.join(entry.path,f)) for f in os.listdir(entry.path) if f != ".umpire"], state
 
 
     def format_entry_name(self):
