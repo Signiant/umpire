@@ -7,6 +7,7 @@ repo.py contains code to control the local cache for umpire. It is not a module.
 import os, shutil, time
 import ConfigParser
 import maestro.tools.path
+import maestro.tools.file
 import maestro.core.module
 from urlparse import urlparse
 from unpack import UnpackModule
@@ -109,6 +110,11 @@ def read_entry(file_location):
     if not entry.config_version:
         raise EntryError("Unable to parse config_version from entry file: " + file_location)
 
+    try:
+        entry.config_version = parser.get(CONFIG_ENTRY_SECTION_NAME, "md5")
+    except ConfigParser.Error:
+        entry.md5 = None
+
     return entry
 
 def write_entry(entry):
@@ -122,6 +128,9 @@ def write_entry(entry):
         config.set(CONFIG_ENTRY_SECTION_NAME, "platform", entry.platform)
         config.set(CONFIG_ENTRY_SECTION_NAME, "version", entry.version)
         config.set(CONFIG_ENTRY_SECTION_NAME, "config_version", CURRENT_ENTRY_CONFIG_VERSION)
+
+        if entry.md5:
+            config.set(CONFIG_ENTRY_SECTION_NAME, "md5", entry.md5)
 
         with open(os.path.join(entry.path, CONFIG_FILENAME), "w+") as f:
             return config.write(f)
@@ -212,7 +221,6 @@ class LocalCache(object):
 
         found_entry = None
         if entry_file is not None:
-
             found_entry = read_entry(entry_file)
 
         return found_entry
@@ -253,7 +261,10 @@ class LocalCache(object):
 
 
     #Puts an archive of files into the cache
-    def put(self,archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
+    def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
+
+        #Generate md5
+        local_checksum = maestro.tools.file.md5_checksum(archive_path)
 
         #Get Archive filename
         archive_filename = os.path.split(archive_path)[1]
@@ -290,6 +301,7 @@ class LocalCache(object):
         entry.version = version
         entry.platform = platform
         entry.path = entry_root
+        entry.md5 = local_checksum
 
         #Write the entry
         write_entry(entry)
@@ -300,7 +312,7 @@ class LocalCache(object):
             if unpacker.exception is not None:
                 raise unpacker.exception
 
-    #Set the repositories remote URL (updates local .umpire_repo file)
+    #Set the repositories remote URL (updates local .umpire file)
     def set_remote(url):
         pass #TODO: Future
 

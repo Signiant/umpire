@@ -5,6 +5,7 @@ from cache import LocalCache
 from multiprocessing import Value
 from maestro.core import module
 from maestro.aws import s3
+from maestro.tools import file as mfile
 
 CACHE_LOCATION_KEYS = ["c", "cache-location"]
 DEPENDENCY_NAME_KEYS = ["n", "name"]
@@ -89,6 +90,9 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
         else:
             state = EntryState.CACHE
 
+        #Verify Remote MD5
+
+        #We need to download the file, it wasn't in the cache
         if entry is None:
             print (self.format_entry_name() + ": Not in cache")
             full_url = s3.join_s3_url(self.dependency_repo, self.dependency_platform, self.dependency_name, self.dependency_version)
@@ -117,8 +121,12 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
                 raise EntryError(self.format_entry_name() + ": Unable to find remote entry '" + full_url + "'")
 
             #Iterate of the result (downloaded files)
-            for item in downloader.result:
-                #TODO: MD5 verification
+            for item, checksum in downloader.result:
+                local_file_checksum = mfile.md5_checksum(item)
+                if checksum != local_file_checksum:
+                    print(self.format_entry_name() + ": WARNING: Downloaded file does not match the checksum on the server")
+                    print(self.format_entry_name() + ": WARNING: local:\t" + str(local_file_checksum))
+                    print(self.format_entry_name() + ": WARNING: server:\t" + str(checksum))
                 print (self.format_entry_name() + ": Unpacking...")
                 #Put will unlock
                 cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version)

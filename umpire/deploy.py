@@ -45,6 +45,8 @@ class DeploymentModule(module.AsyncModule):
                     continue
                 if item == "-d" or item == "--debug":
                     self.DEBUG = True
+                elif item.startswith("-"):
+                    pass #ignore
                 else:
                     json_index = index
 
