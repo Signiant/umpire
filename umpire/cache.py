@@ -132,11 +132,6 @@ class EntryInfo(object):
     platform = None
     version = None
 
-    def lock(self):
-        pass
-    def unlock(self):
-        pass
-
 class EntryError(Exception):
     pass
 
@@ -207,14 +202,45 @@ class LocalCache(object):
             return read_entry(entry_file)
     
     #Locks a local entry
-    def lock(self, entry):
-        pass #TODO: Future
+    def lock(self, path, force=False):
+        try:
+            os.makedirs(path)
+        except OSError as e:
+            pass
 
-    def unlock(self, entry):
-        pass #TODO: Future
-        
-    #Puts an archive of files into the cache 
-    def put(self,archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
+        lockfile = os.path.join(path, LOCK_FILENAME)
+
+        timeout_counter = 0
+        while(os.path.exists(lockfile)):
+            if force:
+                os.remove(lockfile)
+                break
+            with open(lockfile, 'r') as lf:
+                pid = int(lf.read())
+                if pid == os.getpid():
+                    break
+            timeout_counter += 5
+            time.sleep(5)
+        if not os.path.exists(lockfile):
+            with open(lockfile, 'w') as lf:
+                lf.write(str(os.getpid()))
+
+    def unlock(self, path, force=False):
+        lockfile = os.path.join(path, LOCK_FILENAME)
+        pid = -1
+        with open(lockfile, 'r') as lf:
+            pid = int(lf.read())
+        if pid == os.getpid():
+            os.remove(lockfile)
+        else:
+            raise EntryLockError("This process (%d) is not the owner (%d) of the lockfile it's trying to unlock: %s" % os.getpid(), pid, lockfile)
+
+
+    #Puts an archive of files into the cache
+    def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
+
+        #Generate md5
+        local_checksum = maestro.tools.file.md5_checksum(archive_path)
 
         #Get Archive filename
         archive_filename = os.path.split(archive_path)[1]
