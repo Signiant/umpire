@@ -143,11 +143,6 @@ class EntryInfo(object):
     platform = None
     version = None
 
-    def lock(self):
-        pass
-    def unlock(self):
-        pass
-
 class EntryError(Exception):
     pass
 
@@ -217,14 +212,12 @@ class LocalCache(object):
     #Gets EntryInfo object, returns None if it doesn't exist.
     def get(self, platform, name, version):
         cs_entry_file = os.path.join(self.local_path, platform, name, version, ".umpire")
-        entry_file = maestro.tools.path.get_case_insensitive_path(cs_entry_file)
-
-        found_entry = None
-        if entry_file is not None:
-            found_entry = read_entry(entry_file)
-
-        return found_entry
-
+        entry_file = maestro.tools.path.get_case_insensitive_path(path=cs_entry_file)
+        if entry_file is None:
+            return None
+        else:
+            return read_entry(entry_file)
+    
     #Locks a local entry
     def lock(self, path, force=False):
         try:
@@ -251,14 +244,13 @@ class LocalCache(object):
 
     def unlock(self, path, force=False):
         lockfile = os.path.join(path, LOCK_FILENAME)
-
+        pid = -1
         with open(lockfile, 'r') as lf:
             pid = int(lf.read())
-            if pid == os.getpid():
-                os.remove(lockfile)
-            else:
-                raise EntryLockError("This process (%d) is not the owner (%d) of the lockfile it's trying to unlock: %s" % os.getpid(), pid, lockfile)
-
+        if pid == os.getpid():
+            os.remove(lockfile)
+        else:
+            raise EntryLockError("This process (%d) is not the owner (%d) of the lockfile it's trying to unlock: %s" % os.getpid(), pid, lockfile)
 
     #Puts an archive of files into the cache
     def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
