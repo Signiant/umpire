@@ -8,12 +8,15 @@ Umpire is being developed as an easy to install command line tool, with it's fle
 
 ### Version History
 
-**v0.2.0**
+**v0.3.4**   Help & error message updates
+  - Added warning message when umpire encounters a locked cache entry, workaround to issue #1
+  - Updated the help text
+  - Improved error reporting
+  - Updated this Readme
 
- Initial working version of Umpire
-  - Dependencies will automatically link to their destination
-  - Dependencies will automatically unpack when added to the cache
-  - Dependencies will automatically download when missing from the cache
+**v0.3.3**   Bug fixes
+   - Fixed bug in Windows in which Umpire would try to remove a lock file that was still open.
+   - Fixed anonymous credentials bug, where an AWS credentials file would need to exist in order to download from S3.
 
 ### Installation
 Installing Umpire is easy. All you need is the pip package manager, and Python version 2.7.x (Windows **requires** version **2.7.11**).
@@ -26,7 +29,7 @@ Don't have pip? Get it [here.](https://pypi.python.org/pypi/pip)
 
 ### Examples
 
-Below is an example deployment JSON file, taken from one of our projects at Signiant. The URL is composed of the identifier (s3://) and the bucket name, which as of version 0.2.0 should be anonymously accessible.
+Below is an example deployment JSON file, taken from one of our projects at Signiant. The URL is composed of the identifier (s3://) and the bucket name, which currently must be anonymously accessible.
 
 The items array contains the list of dependencies. Each one requires a platform, name and version. In the s3 bucket they need to be stored with the prefix: **$PLATFORM/$NAME/$VERSION**. Umpire does a case insensitive match against this naming convention to find the appropriate dependency. It will download all files matching the prefix in the bucket, and will attempt to unpack them for future deployment.
 ```
@@ -59,13 +62,12 @@ We'll gladly take any help in bug fixes, or feature updates if it fits within ou
 
 ##### Todos
 
- - MD5 verification support
+ - Enhanced MD5 verification support
  - Publishing support
  - Authenticated S3 access
  - Zip, Bzip support
  - Optional unpacking
- - Multi-package bucket support
- - File exclusion (regex)
+ - File exclusion
 
 License
 ----

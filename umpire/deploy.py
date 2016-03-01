@@ -3,13 +3,19 @@
 HELPTEXT = """
                   ----- Umpire -----
 
-The deploy module reads an umpire deployment JSON file.
+Umpire reads a properly formatted JSON deployment file to deploy files.
+Examples can be found on GitHub: https://github.com/Signiant/umpire
 
-Usage: umpire <deployment_file>
+Usage:  umpire <deployment_file>
+
+Options:
+--clear-cache, -c:   Clears the default Umpire cache of all packages
+--repair-cache, -r:  Removes lock files from the cache
+--help, -h:          Displays this help text
 
 """
 
-import sys, os, json, time
+import sys, os, json, time, traceback
 from maestro.core import module
 from maestro.tools import path
 
@@ -116,15 +122,52 @@ class DeploymentModule(module.AsyncModule):
                             break
                         elif (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.DOWNLOADED:
                             print (fetcher.format_entry_name() + ": Re-deploying " + destination_file)
-                            os.remove(destination_file)
-                            path.symlink(entry, destination_file)
+                            try:
+                                os.remove(destination_file)
+                            except OSError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
+                            try:
+                                path.symlink(entry, destination_file)
+                            except WindowsError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
+                            except OSError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
                         elif (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.UPDATED:
                             print (fetcher.format_entry_name() + ": Updating " + destination_file)
-                            os.remove(destination_file)
-                            path.symlink(entry, destination_file)
+                            try:
+                                os.remove(destination_file)
+                            except OSError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
+                            try:
+                                path.symlink(entry, destination_file)
+                            except WindowsError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
+                            except OSError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
                         else:
                             print (fetcher.format_entry_name() + ": Linking " + destination_file)
-                            path.symlink(entry, destination_file)
+                            try:
+                                path.symlink(entry, destination_file)
+                            except WindowsError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
+                            except OSError as e:
+                                if(DEBUG):
+                                    traceback.print_exc()
+                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
 
                         #TODO: Kinda hacky, no significance other than to make it not DONE
                         fetcher.status = module.PROCESSED
