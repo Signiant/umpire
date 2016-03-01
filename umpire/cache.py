@@ -217,7 +217,7 @@ class LocalCache(object):
             return None
         else:
             return read_entry(entry_file)
-    
+
     #Locks a local entry
     def lock(self, path, force=False):
         try:
@@ -228,8 +228,14 @@ class LocalCache(object):
         lockfile = os.path.join(path, LOCK_FILENAME)
 
         timeout_counter = 0
+        if(os.path.exists(lockfile)):
+            print("INFO: A cache entry has been locked. Umpire will wait up to " + str(config.LOCKFILE_TIMEOUT) + "s for the file to unlock and will then force an unlock.")
         while(os.path.exists(lockfile)):
+            if timeout_counter >= config.LOCKFILE_TIMEOUT:
+                print("Timeout reached.")
+                force = True
             if force:
+                print("Forcing unlock for: " + str(lockfile))
                 os.remove(lockfile)
                 break
             with open(lockfile, 'r') as lf:

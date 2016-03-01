@@ -43,7 +43,10 @@ class Umpire(execute.ModuleExecuter):
                 shutil.rmtree(get_umpire_root())
                 sys.exit(0)
             elif item == "-r" or item == "--repair-cache":
-                path.purge(".umplock", get_umpire_root())
+                path.purge(config.LOCK_FILENAME, get_umpire_root())
+                sys.exit(0)
+            elif item == "-h" or item == "--help":
+                print deploy.help_text
                 sys.exit(0)
             elif item == "-s" or item == "--skip-update":
                 self.skip_update = True

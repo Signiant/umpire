@@ -15,3 +15,4 @@ CURRENT_REPO_CONFIG_VERSION = "0.1"
 CONFIG_FILENAME = ".umpire"
 REMOTE_VERSION_FILENAME = os.path.join(default_umpire_root,"remote_version")
 REMOTE_VERSION_URL = "http://s3.amazonaws.com/umpire/version"
+LOCKFILE_TIMEOUT = 600 # 10 minutes
