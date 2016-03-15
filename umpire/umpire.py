@@ -10,6 +10,8 @@ import sys,os
 #Internal Modules
 from . import fetch, unpack, deploy, update
 
+from .deploy import HELPTEXT
+
 #Config
 from . import config
 
@@ -46,7 +48,7 @@ class Umpire(execute.ModuleExecuter):
                 path.purge(config.LOCK_FILENAME, get_umpire_root())
                 sys.exit(0)
             elif item == "-h" or item == "--help":
-                print deploy.help_text
+                print(HELPTEXT)
                 sys.exit(0)
             elif item == "-s" or item == "--skip-update":
                 self.skip_update = True
