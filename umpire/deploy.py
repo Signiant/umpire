@@ -76,7 +76,7 @@ class DeploymentModule(module.AsyncModule):
                 name = item["name"]
                 version = item["version"]
                 platform = item["platform"]
-                destination = item["destination"]
+                destination = os.path.expandvars(item["destination"])
 
                 fetcher = fetch.FetchModule(None)
                 fetcher.dependency_name = name
