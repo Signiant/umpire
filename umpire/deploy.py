@@ -36,6 +36,9 @@ class DeploymentModule(module.AsyncModule):
     #Cache Root
     cache_root = None
 
+    #Deployment File
+    deployment_file = None
+
     #Set to true to view tracebacks for exceptions
     DEBUG = False
 
@@ -44,26 +47,15 @@ class DeploymentModule(module.AsyncModule):
         exit(0)
 
     def run(self,kwargs):
-        json_index = 1
         try:
-            for index, item in enumerate(sys.argv):
-                if index == 0:
-                    continue
-                if item == "-d" or item == "--debug":
-                    self.DEBUG = True
-                elif item.startswith("-"):
-                    pass #ignore
-                else:
-                    json_index = index
-
-            with open(sys.argv[json_index]) as f:
+            with open(self.deployment_file) as f:
                 data = json.load(f)
-        except IndexError:
+        except TypeError:
             print(HELPTEXT)
             sys.exit(1)
         except IOError as e:
             if not self.DEBUG:
-                print("Unable to locate file: " + sys.argv[json_index])
+                print("Unable to locate file: " + self.deployment_file)
             else:
                 raise e
             sys.exit(1)

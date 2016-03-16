@@ -23,6 +23,8 @@ def entry():
 class Umpire(execute.ModuleExecuter):
 
     skip_update = True
+    debug = False
+    deployment_file = None
 
     #
     # !!!Register all the dependencies of this program here.!!!
@@ -52,6 +54,10 @@ class Umpire(execute.ModuleExecuter):
                 sys.exit(0)
             elif item == "-s" or item == "--skip-update":
                 self.skip_update = True
+            elif item == "-d" or item == "--debug":
+                self.debug = True
+            else:
+                self.deployment_file = item
 
 
         self.register_dependencies()
@@ -85,6 +91,10 @@ class Umpire(execute.ModuleExecuter):
 
         #TODO: Fix to use just RUN
         deployer.cache_root = get_umpire_root()
+        
+        deployer.deployment_file = self.deployment_file
+
+        deployer.DEBUG = self.debug
 
         try:
             #Run it
