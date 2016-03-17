@@ -3,12 +3,14 @@ from maestro.core import execute
 from maestro.aws import s3
 from maestro.tools import path
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 import sys,os
 
 #Internal Modules
 from . import fetch, unpack, deploy, update
+
+from .deploy import HELPTEXT
 
 #Config
 from . import config
@@ -21,6 +23,8 @@ def entry():
 class Umpire(execute.ModuleExecuter):
 
     skip_update = True
+    debug = False
+    deployment_file = None
 
     #
     # !!!Register all the dependencies of this program here.!!!
@@ -46,10 +50,14 @@ class Umpire(execute.ModuleExecuter):
                 path.purge(config.LOCK_FILENAME, get_umpire_root())
                 sys.exit(0)
             elif item == "-h" or item == "--help":
-                print deploy.help_text
+                print(HELPTEXT)
                 sys.exit(0)
             elif item == "-s" or item == "--skip-update":
                 self.skip_update = True
+            elif item == "-d" or item == "--debug":
+                self.debug = True
+            else:
+                self.deployment_file = item
 
 
         self.register_dependencies()
@@ -83,6 +91,10 @@ class Umpire(execute.ModuleExecuter):
 
         #TODO: Fix to use just RUN
         deployer.cache_root = get_umpire_root()
+        
+        deployer.deployment_file = self.deployment_file
+
+        deployer.DEBUG = self.debug
 
         try:
             #Run it
