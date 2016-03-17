@@ -8,7 +8,8 @@ Umpire is being developed as an easy to install command line tool, with it's fle
 
 ### Version History
 
-**v0.3.4**   Help & error message updates
+**v0.4.0**   Environment variable support, Help & error message updates
+  - Added support for environment variables in deploy files
   - Added warning message when umpire encounters a locked cache entry, workaround to issue #1
   - Updated the help text
   - Improved error reporting

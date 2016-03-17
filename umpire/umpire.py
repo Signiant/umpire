@@ -3,7 +3,7 @@ from maestro.core import execute
 from maestro.aws import s3
 from maestro.tools import path
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 import sys,os
 
