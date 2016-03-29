@@ -117,17 +117,17 @@ class DeploymentModule(module.AsyncModule):
                             try:
                                 os.remove(destination_file)
                             except OSError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
                             try:
                                 path.symlink(entry, destination_file)
                             except WindowsError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
                             except OSError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
                         elif (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.UPDATED:
@@ -135,17 +135,17 @@ class DeploymentModule(module.AsyncModule):
                             try:
                                 os.remove(destination_file)
                             except OSError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
                             try:
                                 path.symlink(entry, destination_file)
                             except WindowsError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
                             except OSError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
                         else:
@@ -153,11 +153,11 @@ class DeploymentModule(module.AsyncModule):
                             try:
                                 path.symlink(entry, destination_file)
                             except WindowsError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
                             except OSError as e:
-                                if(DEBUG):
+                                if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
 
