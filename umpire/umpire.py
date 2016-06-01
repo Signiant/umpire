@@ -22,6 +22,7 @@ def entry():
 
 class Umpire(execute.ModuleExecuter):
 
+    #Defaults for command line flags
     skip_update = True
     debug = False
     deployment_file = None
@@ -38,7 +39,6 @@ class Umpire(execute.ModuleExecuter):
 
     def run(self, kwargs):
 
-        #TODO: Add these as modules (or a module)
         for index, item in enumerate(sys.argv):
             if index == 0:
                 continue
@@ -91,7 +91,7 @@ class Umpire(execute.ModuleExecuter):
 
         #TODO: Fix to use just RUN
         deployer.cache_root = get_umpire_root()
-        
+
         deployer.deployment_file = self.deployment_file
 
         deployer.DEBUG = self.debug
