@@ -38,7 +38,7 @@ class Umpire(execute.ModuleExecuter):
 
     def run(self, kwargs):
 
-        #TODO: Add these as modules (or a module)
+        #TODO: Make this less stupid
         for index, item in enumerate(sys.argv):
             if index == 0:
                 continue
@@ -50,8 +50,11 @@ class Umpire(execute.ModuleExecuter):
                 path.purge(config.LOCK_FILENAME, get_umpire_root())
                 sys.exit(0)
             elif item == "-h" or item == "--help":
-                print(HELPTEXT)
+                print(deploy.HELPTEXT)
                 sys.exit(0)
+            elif item == "--version":
+                from subprocess import call
+                call(["pip","show","umpire"])
             elif item == "-s" or item == "--skip-update":
                 self.skip_update = True
             elif item == "-d" or item == "--debug":
