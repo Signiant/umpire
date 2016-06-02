@@ -255,7 +255,7 @@ class LocalCache(object):
         if pid == os.getpid():
             os.remove(lockfile)
         else:
-            raise EntryLockError("This process (%d) is not the owner (%d) of the lockfile it's trying to unlock: %s" % os.getpid(), pid, lockfile)
+            raise EntryLockError("This process (" + str(os.getpid()) + ") is not the owner (" + str(pid) + ") of the lockfile it's trying to unlock: " + str(lockfile))
 
     #Puts an archive of files into the cache
     def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
