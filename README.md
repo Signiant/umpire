@@ -8,16 +8,16 @@ Umpire is being developed as an easy to install command line tool, with it's fle
 
 ### Version History
 
+**v0.4.2**   Stability fixes, copy + don't unpack support
+  - Added support for optional unpacking 
+  - Added support for copy vs link
+
 **v0.4.0**   Environment variable support, Help & error message updates
   - Added support for environment variables in deploy files
   - Added warning message when umpire encounters a locked cache entry, workaround to issue #1
   - Updated the help text
   - Improved error reporting
   - Updated this Readme
-
-**v0.3.3**   Bug fixes
-   - Fixed bug in Windows in which Umpire would try to remove a lock file that was still open.
-   - Fixed anonymous credentials bug, where an AWS credentials file would need to exist in order to download from S3.
 
 ### Installation
 Installing Umpire is easy. All you need is the pip package manager, and Python version 2.7.x (Windows **requires** version **2.7.11**).
@@ -43,6 +43,7 @@ The items array contains the list of dependencies. Each one requires a platform,
 	        "version":"1.2.8",
 	        "platform":"win64",
 	        "destination":"./destination/zlib/"
+            "link":"false"
 	      },
 	      {
 		    "name":"swigwin",

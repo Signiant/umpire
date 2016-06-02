@@ -84,13 +84,13 @@ class DeploymentModule(module.AsyncModule):
                 #Optional parameters
                 link = True
                 try:
-                    link = item["link"] != 'false'
+                    link = item["link"]
                 except KeyError:
                     #Debugging logging
                     pass
                 unpack = True
                 try:
-                    unpack = item["unpack"] != 'false'
+                    unpack = item["unpack"]
                 except KeyError:
                     #Debugging logging
                     pass

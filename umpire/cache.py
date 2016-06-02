@@ -307,7 +307,8 @@ class LocalCache(object):
                 time.sleep(0.2)
 
             if unpacker.exception is not None:
-                raise unpacker.exception
+                pass #Hack for now in case whatever it is isn't an archive
+                #raise unpacker.exception
 
     #Set the repositories remote URL (updates local .umpire file)
     def set_remote(url):

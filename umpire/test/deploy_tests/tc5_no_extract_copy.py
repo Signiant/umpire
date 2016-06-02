@@ -16,8 +16,8 @@ deployment_json = """
                 "name":"test",
                 "version":"test",
                 "platform":"test",
-                "link":"false",
-                "unpack":"false",
+                "link":false,
+                "unpack":false,
                 "destination":"$tc5/testA"
             }
         ]

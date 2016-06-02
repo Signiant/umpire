@@ -28,7 +28,7 @@ deployment_json = """
                 "name":"test",
                 "version":"test",
                 "platform":"test",
-                "link":"false",
+                "link":false,
                 "destination":"$tc1/testC"
             }
         ]
