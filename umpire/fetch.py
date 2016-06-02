@@ -113,7 +113,8 @@ class FetchModule(module.AsyncModule):
                     print(self.format_entry_name() + ": WARNING: Downloaded file does not match the checksum on the server")
                     print(self.format_entry_name() + ": WARNING: local:\t" + str(local_file_checksum))
                     print(self.format_entry_name() + ": WARNING: server:\t" + str(checksum))
-                print (self.format_entry_name() + ": Unpacking...")
+                if self.dependency_unpack:
+                    print (self.format_entry_name() + ": Unpacking...")
                 #Put will unlock
                 cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack=self.dependency_unpack)
             entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)

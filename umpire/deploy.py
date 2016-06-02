@@ -10,8 +10,9 @@ Usage:  umpire <deployment_file>
 
 Options:
 --clear-cache, -c:   Clears the default Umpire cache of all packages
---repair-cache, -r:  Removes lock files from the cache
 --help, -h:          Displays this help text
+--repair-cache, -r:  Removes lock files from the cache
+--version:           Displays the current version of Umpire
 
 """
 
@@ -83,13 +84,13 @@ class DeploymentModule(module.AsyncModule):
                 #Optional parameters
                 link = True
                 try:
-                    link = item["link"] != 'false'
+                    link = item["link"]
                 except KeyError:
                     #Debugging logging
                     pass
                 unpack = True
                 try:
-                    unpack = item["unpack"] != 'false'
+                    unpack = item["unpack"]
                 except KeyError:
                     #Debugging logging
                     pass
@@ -122,7 +123,13 @@ class DeploymentModule(module.AsyncModule):
                     done_count += 1
                     continue
                 if not os.path.exists(destination):
-                    os.makedirs(destination)
+                    try:
+                        os.makedirs(destination)
+                    except OSError as e:
+                        if(self.DEBUG):
+                            traceback.print_exc()
+                        raise DeploymentError(fetcher.format_entry_name() + ": Error attempting to create destination directories.")
+
                 if fetcher.status == module.DONE and fetcher.exception is not None:
                     if self.DEBUG:
                         print (fetcher.exception.traceback)

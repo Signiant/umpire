@@ -244,9 +244,8 @@ class LocalCache(object):
                     break
             timeout_counter += 5
             time.sleep(5)
-        if not os.path.exists(lockfile):
-            with open(lockfile, 'w') as lf:
-                lf.write(str(os.getpid()))
+        with open(lockfile, 'w') as lf:
+            lf.write(str(os.getpid()))
 
     def unlock(self, path, force=False):
         lockfile = os.path.join(path, LOCK_FILENAME)
@@ -308,7 +307,8 @@ class LocalCache(object):
                 time.sleep(0.2)
 
             if unpacker.exception is not None:
-                raise unpacker.exception
+                pass #Hack for now in case whatever it is isn't an archive
+                #raise unpacker.exception
 
     #Set the repositories remote URL (updates local .umpire file)
     def set_remote(url):
