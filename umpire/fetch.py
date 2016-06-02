@@ -24,24 +24,6 @@ class EntryError(Exception):
 
 class FetchModule(module.AsyncModule):
 
-    HELPTEXT = """
-                  ----- Fetch Module -----
-
-The fetch module locates a "package" using arbitrary identifiers. It will return a local directory.
-
--c, --cache-root <path>:        Specify the local root cache directory (must exist)
-                                    (required)
--n, --name <name>:              Specify the dependency name
-                                    (default source file name)
--p, --platform <platform>:      Specify the target platform
-                                    (required)
--r, --repository <url>:          Specify the root of the repository to obtain files.
-                                    (required)
--v, --version <version>:        Specify the target version
-                                    (default latest)
-
-"""
-
     # Required ID of this module
     id = "fetch"
 
@@ -64,9 +46,13 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
     #The repository to fetch the dependency, or to verify the integrity from
     dependency_repo = None
 
+    #Is the dependency going to be linked?
+    dependency_is_link = None
+
+    #Is the dependency going to be extracted after the download
+    dependency_unpack = None
+
     def run(self,kwargs):
-        if kwargs is not None:
-            pass #TODO: Near future
 
         #Verify argument validity
         self.__verify_arguments__()
@@ -129,7 +115,7 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
                     print(self.format_entry_name() + ": WARNING: server:\t" + str(checksum))
                 print (self.format_entry_name() + ": Unpacking...")
                 #Put will unlock
-                cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version)
+                cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack=self.dependency_unpack)
             entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
             if entry is None:
                 raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")
@@ -150,6 +136,12 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
             raise ValueError("You must specify a valid platform for the dependency.")
         if not self.dependency_version:
             raise ValueError("You must specify a valid version for the dependency.")
+        if not self.dependency_is_link:
+            # Not used
+            pass
+        if not isinstance(self.dependency_unpack,bool):
+            print str(self.dependency_unpack)
+            raise ValueError("You must specify whether the dependency should be unpacked or not")
 
     def get_cache_name(self):
         try:
@@ -173,24 +165,3 @@ The fetch module locates a "package" using arbitrary identifiers. It will return
             elif key in DEPENDENCY_VERSION_KEYS:
                 self.dependency_version = val
 
-if __name__ == "__main__":
-    from cache import create_local_cache
-
-    remote_url = "s3://thirdpartydependencies/"
-    create_local_cache("./test_cache/thirdpartydependencies.s3", remote_url)
-    fetcher = FetchModule(None)
-    fetcher.dependency_repo = remote_url
-    fetcher.cache_root = "./test_cache"
-    fetcher.dependency_name = "zlib"
-    fetcher.dependency_version = "1.2.8"
-    fetcher.dependency_platform = "win64"
-
-    fetcher.start()
-    while fetcher.status != module.DONE:
-        time.sleep(0.5)
-
-    if fetcher.exception is not None:
-        print (str(fetcher.exception))
-    for item in fetcher.result:
-        print (item)
-    print ("Done!")

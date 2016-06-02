@@ -23,6 +23,13 @@ deployment_json = """
                 "version":"test",
                 "platform":"test",
                 "destination":"$tc1/testB"
+            },
+            {
+                "name":"test",
+                "version":"test",
+                "platform":"test",
+                "link":"false",
+                "destination":"$tc1/testC"
             }
         ]
     }
@@ -69,12 +76,19 @@ class TC1(unittest.TestCase):
         deploy.DEBUG = True
         print("Starting deploy and waiting for finish.")
         deploy.run(None)
+
+        self.assertTrue(os.path.islink(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")))
         with open(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")) as f:
             lines = f.readlines()
             self.assertEqual(lines[0],"HI!\n")
 
+        self.assertTrue(os.path.islink(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")))
         with open(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")) as f:
             lines = f.readlines()
             self.assertEqual(lines[0],"HI!\n")
 
-        
+        self.assertFalse(os.path.islink(os.path.join(self.tempdir,"./deployment/testC/this_is_test_data")))
+        with open(os.path.join(self.tempdir,"./deployment/testC/this_is_test_data")) as f:
+            lines = f.readlines()
+            self.assertEqual(lines[0],"HI!\n")
+

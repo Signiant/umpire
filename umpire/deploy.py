@@ -16,7 +16,15 @@ Options:
 
 """
 
-import sys, os, json, time, traceback
+# Define WindowError if we're on Linux
+try:
+    WindowsError
+except NameError:
+    WindowsError = None
+
+
+import sys, os, json, time, traceback, shutil
+from distutils import dir_util
 from maestro.core import module
 from maestro.tools import path
 
@@ -66,16 +74,35 @@ class DeploymentModule(module.AsyncModule):
         for repo in data:
             repo_url = repo["url"]
             for item in repo["items"]:
+
+                #Required parameters
                 name = item["name"]
                 version = item["version"]
                 platform = item["platform"]
                 destination = os.path.expandvars(item["destination"])
 
+                #Optional parameters
+                link = True
+                try:
+                    link = item["link"] != 'false'
+                except KeyError:
+                    #Debugging logging
+                    pass
+                unpack = True
+                try:
+                    unpack = item["unpack"] != 'false'
+                except KeyError:
+                    #Debugging logging
+                    pass
+
+                #Configure a Fetch module for each entry
                 fetcher = fetch.FetchModule(None)
                 fetcher.dependency_name = name
                 fetcher.dependency_version = version
                 fetcher.dependency_platform = platform
                 fetcher.dependency_repo = repo_url
+                fetcher.dependency_is_link = link
+                fetcher.dependency_unpack = unpack
                 fetcher.cache_root = self.cache_root
 
                 #TODO: Figure out how to move this out of deploy
@@ -115,20 +142,31 @@ class DeploymentModule(module.AsyncModule):
                     state = fetcher.result[1]
                     for entry in files:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
-                        if (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.CACHE:
+                        if (os.path.exists(destination_file) and os.path.islink(destination_file) and state == fetch.EntryState.CACHE):
                             print (fetcher.format_entry_name() + ": Already deployed at latest.")
                             fetcher.status = module.PROCESSED
                             break
-                        elif (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.DOWNLOADED:
+                        elif (os.path.exists(destination_file) and state == fetch.EntryState.DOWNLOADED):
                             print (fetcher.format_entry_name() + ": Re-deploying " + destination_file)
                             try:
-                                os.remove(destination_file)
+                                if os.path.isdir(destination_file):
+                                    try:
+                                        os.rmdir(destination_file)
+                                    except OSError as e:
+                                        shutil.rmtree(destination_file)
+                                else:
+                                    os.unlink(destination_file)
                             except OSError as e:
                                 if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
                             try:
-                                path.symlink(entry, destination_file)
+                                if fetcher.dependency_is_link:
+                                    path.symlink(entry, destination_file)
+                                elif os.path.isdir(entry):
+                                    dir_util.copy_tree(entry, destination_file)
+                                else:
+                                    shutil.copyfile(entry, destination_file)
                             except WindowsError as e:
                                 if(self.DEBUG):
                                     traceback.print_exc()
@@ -137,16 +175,27 @@ class DeploymentModule(module.AsyncModule):
                                 if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
-                        elif (os.path.exists(destination_file) or os.path.islink(destination_file)) and state == fetch.EntryState.UPDATED:
+                        elif (os.path.exists(destination_file) and state == fetch.EntryState.UPDATED):
                             print (fetcher.format_entry_name() + ": Updating " + destination_file)
                             try:
-                                os.remove(destination_file)
+                                if os.path.isdir(destination_file):
+                                    try:
+                                        os.rmdir(destination_file)
+                                    except OSError as e:
+                                        shutil.rmtree(destination_file)
+                                else:
+                                    os.unlink(destination_file)
                             except OSError as e:
                                 if(self.DEBUG):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
                             try:
-                                path.symlink(entry, destination_file)
+                                if fetcher.dependency_is_link:
+                                    path.symlink(entry, destination_file)
+                                elif os.path.isdir(entry):
+                                    dir_util.copy_tree(entry, destination_file)
+                                else:
+                                    shutil.copyfile(entry, destination_file)
                             except WindowsError as e:
                                 if(self.DEBUG):
                                     traceback.print_exc()
@@ -156,9 +205,27 @@ class DeploymentModule(module.AsyncModule):
                                     traceback.print_exc()
                                 raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
                         else:
-                            print (fetcher.format_entry_name() + ": Linking " + destination_file)
+                            if os.path.exists(destination_file):
+                                try:
+                                    if os.path.isdir(destination_file):
+                                        try:
+                                            os.rmdir(destination_file)
+                                        except OSError as e:
+                                            shutil.rmtree(destination_file)
+                                    else:
+                                        os.unlink(destination_file)
+                                except OSError as e:
+                                    if(self.DEBUG):
+                                        traceback.print_exc()
+                                    raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
                             try:
-                                path.symlink(entry, destination_file)
+                                if fetcher.dependency_is_link:
+                                    print (fetcher.format_entry_name() + ": Linking " + destination_file)
+                                    path.symlink(entry, destination_file)
+                                elif os.path.isdir(entry):
+                                    dir_util.copy_tree(entry, destination_file)
+                                else:
+                                    shutil.copyfile(entry, destination_file)
                             except WindowsError as e:
                                 if(self.DEBUG):
                                     traceback.print_exc()
