@@ -244,7 +244,7 @@ class LocalCache(object):
                     break
             timeout_counter += 5
             time.sleep(5)
-        with open(lockfile, 'w') as lf:
+        with open(lockfile, 'w+') as lf:
             lf.write(str(os.getpid()))
 
     def unlock(self, path, force=False):
