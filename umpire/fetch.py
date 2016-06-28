@@ -66,6 +66,8 @@ class FetchModule(module.AsyncModule):
         #Get cache object (will raise an exception if it doesn't exist)
         cache = LocalCache(cache_path)
 
+        cache.DEBUG = self.DEBUG
+
         cache.lock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
         #Try to get entry from cache
         entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)

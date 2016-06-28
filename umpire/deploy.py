@@ -104,7 +104,7 @@ class DeploymentModule(module.AsyncModule):
                 fetcher.dependency_is_link = link
                 fetcher.dependency_unpack = unpack
                 fetcher.cache_root = self.cache_root
-
+                fetcher.DEBUG = self.DEBUG
                 #TODO: Figure out how to move this out of deploy
                 try:
                     cache_dir =  os.path.join(fetcher.cache_root, fetcher.get_cache_name())
