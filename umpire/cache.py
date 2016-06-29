@@ -4,13 +4,14 @@ repo.py contains code to control the local cache for umpire. It is not a module.
 #TODO: Add support for zip, tbz/tar.bz
 #TODO: Write command line module
 
-import os, shutil, time
+import os, shutil, time, traceback
 import ConfigParser
 import maestro.tools.path
 import maestro.tools.file
 import maestro.core.module
 from urlparse import urlparse
 from unpack import UnpackModule
+from maestro.tools.os_tools import check_pid
 from . import config
 
 # Cache constants
@@ -20,6 +21,14 @@ CONFIG_ENTRY_SECTION_NAME = config.CONFIG_ENTRY_SECTION_NAME
 LOCK_FILENAME = config.LOCK_FILENAME
 CURRENT_ENTRY_CONFIG_VERSION = config.CURRENT_ENTRY_CONFIG_VERSION
 CURRENT_REPO_CONFIG_VERSION = config.CURRENT_REPO_CONFIG_VERSION
+
+def backoff(seconds=5):
+    """
+    Backoff for a random interval of time up to the amount in seconds provided (default: 5)
+    """
+    import random
+    backoff_time = int(random.random() * seconds * 10)
+    time.sleep(backoff_time)
 
 def create_local_cache(local_path, remote_url):
     """
@@ -45,6 +54,18 @@ def create_local_cache(local_path, remote_url):
         config.write(f)
 
     return LocalCache(local_path)
+
+def get_lockfile_info(lockfile):
+    with open(lockfile, 'r') as lf:
+        try:
+            lockfile_line = lf.readline()
+            lockfile_content = lockfile_line.split("::")
+            lockfile_host_id = lockfile_content[0]
+            lockfile_pid = int(lockfile_content[1])
+            return lockfile_host_id, lockfile_pid
+        except IndexError, ValueError:
+            #Lockfile seems like it might be corrupted. We'll back off. The writing process(es) should have detected this, and will remove and backoff
+            raise EntryLockError("Lockfile appears corrupted. Try running 'umpire -r' and retrying.")
 
 def read_entry(file_location):
     if not os.path.exists(file_location):
@@ -160,17 +181,19 @@ class LocalCache(object):
     settings_file = None
     remote_url = None
     config_version = None
+    host_id = None
 
     #Lock timeout in seconds
     lock_timeout = None
 
     #Verifies local existance
-    def __init__(self, cache_root, lock_timeout = 1800):
+    def __init__(self, cache_root, lock_timeout = 1800, host_id="localhost"):
         if not os.path.exists(cache_root):
             raise CacheError("The path '" + str(cache_root) + "' does not contain a valid umpire cache.")
 
         self.local_path = cache_root
         self.lock_timeout = lock_timeout
+        self.host_id = host_id
         self.settings_file = os.path.join(cache_root,CONFIG_FILENAME)
 
         if not os.path.exists(self.settings_file):
@@ -219,40 +242,77 @@ class LocalCache(object):
             return read_entry(entry_file)
 
     #Locks a local entry
-    def lock(self, path, force=False):
-        try:
-            os.makedirs(path)
-        except OSError as e:
-            pass
+    def lock(self, path, retry_count=5):
+        """
+        Locks a cache entry in order to perform actions on the cache.
+        """
 
         lockfile = os.path.join(path, LOCK_FILENAME)
-
         timeout_counter = 0
-        if(os.path.exists(lockfile)):
-            print("INFO: A cache entry has been locked. Umpire will wait up to " + str(config.LOCKFILE_TIMEOUT) + "s for the file to unlock and will then force an unlock.")
-        while(os.path.exists(lockfile)):
-            if timeout_counter >= config.LOCKFILE_TIMEOUT:
-                print("Timeout reached.")
-                force = True
-            if force:
-                print("Forcing unlock for: " + str(lockfile))
-                os.remove(lockfile)
-                break
-            with open(lockfile, 'r') as lf:
-                pid = int(lf.read())
-                if pid == os.getpid():
-                    break
-            timeout_counter += 5
-            time.sleep(5)
-        with open(lockfile, 'w+') as lf:
-            lf.write(str(os.getpid()))
+        while(True):
+            #Attempt to make parent directories (we don't care if this w/ OSError, which means the folders likely already exist)
+            try:
+                os.makedirs(path)
+            except OSError as e:
+                pass
+            #Big ol' try, anything we catch in here we want to retry up to retry_count
+            try:
+                #See if we're already locked
+                if(os.path.exists(lockfile)):
+                    lock_id,lock_pid = get_lockfile_info(lockfile)
+                    #Determine if the lockfile is from this host
+                    if lock_id == self.host_id:
+                        #... is it me?
+                        if lock_pid == os.getpid():
+                            if self.DEBUG:
+                                print("WARN: Found a lockfile that apparently belongs to this process... unlocking.")
+                            self.unlock(path)
+                        #It's not us, but we can wait if the process is still running
+                        elif check_pid(lock_pid):
+                            if self.DEBUG:
+                                print("INFO: Umpire is waiting " + str((int(config.LOCKFILE_TIMEOUT)-int(timeout_counter)))  + " for an entry to unlock.")
+                        #Otherwise we're busting open..
+                        else:
+                            print("WARN: Removing lockfile from previous Umpire run")
+                            self.unlock(lockfile, force=True)
+                    else: #We really don't know what's going on with this entry, we'll wait the timeout at most before forcing an unlock
+                        if self.DEBUG:
+                            print("INFO: Umpire is waiting " + str((int(config.LOCKFILE_TIMEOUT)-int(timeout_counter)))  + " for an entry to unlock.")
+
+                    if timeout_counter >= config.LOCKFILE_TIMEOUT:
+                        raise EntryLockTimeoutError("Timed out trying to unlock lockfile: " + str(lockfile))
+
+                    timeout_counter += 10
+                    time.sleep(10)
+
+                #Write lockfile
+                with open(lockfile, 'w') as lf:
+                    lf.write(str(self.host_id) + "::" + str(os.getpid()))
+                    lf.close()
+
+                #Read back lockfile
+                lock_id,lock_pid = get_lockfile_info(lockfile)
+                if lock_id == self.host_id and lock_pid == os.getpid():
+                    return
+                else:
+                    raise EntryLockError("Expected to have lock, but lockfile does not contain the correct information.")
+            except Exception as e:
+                if retry_count <= 0:
+                    print("ERROR: Unable to unlock cache entry after several attempts: ")
+                    raise e
+                else:
+                    backoff()
+                    if self.DEBUG:
+                        print("ERROR: Caught the following exception: " + str(e))
+                        traceback.print_exc()
+                    retry_count -= 1
 
     def unlock(self, path, force=False):
         lockfile = os.path.join(path, LOCK_FILENAME)
         pid = -1
-        with open(lockfile, 'r') as lf:
-            pid = int(lf.read())
-        if pid == os.getpid():
+        #Read back lockfile
+        lock_id,lock_pid = get_lockfile_info(lockfile)
+        if lock_id == self.host_id and lock_pid == os.getpid():
             os.remove(lockfile)
         else:
             raise EntryLockError("This process (" + str(os.getpid()) + ") is not the owner (" + str(pid) + ") of the lockfile it's trying to unlock: " + str(lockfile))
