@@ -12,9 +12,6 @@ from . import fetch, unpack, deploy, update
 
 from .deploy import HELPTEXT
 
-#Config
-from . import config
-
 #Entry point for Umpire
 def entry():
     exit_code = Umpire().exit_code
@@ -38,6 +35,8 @@ class Umpire(execute.ModuleExecuter):
         self.register(update.UpdateModule())
 
     def run(self, kwargs):
+        setup_config(get_umpire_root())
+        import config
 
         for index, item in enumerate(sys.argv):
             if index == 0:
@@ -107,14 +106,9 @@ class Umpire(execute.ModuleExecuter):
             path.purge(".umplock", get_umpire_root())
             sys.exit(1)
 
-def get_umpire_root():
-    hardcoded_root = "./umpire_tmp"
-    try:
-        if not os.path.exists(config.default_umpire_root):
-            os.makedirs(config.default_umpire_root)
-        return config.default_umpire_root
-    except Exception as e:
-        print("Umpire: Error obtaining default umpire root location, using local directory './umpire_tmp': " + str(e), file=sys.stderr)
-        if not os.path.exists(hardcoded_root):
-            os.makedirs(hardcoded_root)
-        return hardcoded_root
+def setup_config(umpire_root):
+    if not os.path.exists(os.path.join(umpire_root, "config.py")):
+        from shutil import copyfile
+        copyfile(os.path.join(os.path.dirname(os.path.realpath(__file__)),"config.py"), os.path.join(umpire_root,"config.py"))
+    sys.path.insert(0,umpire_root)
+

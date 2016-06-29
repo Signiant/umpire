@@ -6,6 +6,7 @@ from multiprocessing import Value
 from maestro.core import module
 from maestro.aws import s3
 from maestro.tools import file as mfile
+import config
 
 CACHE_LOCATION_KEYS = ["c", "cache-location"]
 DEPENDENCY_NAME_KEYS = ["n", "name"]
@@ -64,7 +65,7 @@ class FetchModule(module.AsyncModule):
         cache_path = os.path.join(self.cache_root, cache_name)
 
         #Get cache object (will raise an exception if it doesn't exist)
-        cache = LocalCache(cache_path)
+        cache = LocalCache(cache_path, lock_timeout=config.LOCKFILE_TIMEOUT)
 
         cache.lock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
         #Try to get entry from cache

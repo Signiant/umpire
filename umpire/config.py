@@ -1,18 +1,10 @@
-import os.path
+import os,sys
 
-default_umpire_root = os.path.join(os.path.expanduser("~"), ".umpire")
+umpire_root = os.path.join(os.path.expanduser("~"), ".umpire")
 
-# Enable on build nodes, or anywhere that doesn't need SUDO
-autoupdate = False
+if not os.path.exists(os.path.join(umpire_root, "config.py")):
+    from shutil import copyfile
+    copyfile(os.path.join(os.path.dirname(os.path.realpath(__file__)),"config.py"), os.path.join(umpire_root,"config.py"))
+sys.path.insert(0,umpire_root)
 
-#Cache config
-CONFIG_FILENAME = ".umpire"
-CONFIG_REPO_SECTION_NAME = "umpire"
-CONFIG_ENTRY_SECTION_NAME = "entry"
-LOCK_FILENAME = ".umplock"
-CURRENT_ENTRY_CONFIG_VERSION = "0.1"
-CURRENT_REPO_CONFIG_VERSION = "0.1"
-CONFIG_FILENAME = ".umpire"
-REMOTE_VERSION_FILENAME = os.path.join(default_umpire_root,"remote_version")
-REMOTE_VERSION_URL = "http://s3.amazonaws.com/umpire/version"
-LOCKFILE_TIMEOUT = 600 # 10 minutes
+from config import *
