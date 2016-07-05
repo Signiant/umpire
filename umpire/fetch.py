@@ -2,6 +2,7 @@
 
 import sys, os, urllib, time, traceback
 from cache import LocalCache
+from config import default_host_id
 from multiprocessing import Value
 from maestro.core import module
 from maestro.aws import s3
@@ -64,7 +65,7 @@ class FetchModule(module.AsyncModule):
         cache_path = os.path.join(self.cache_root, cache_name)
 
         #Get cache object (will raise an exception if it doesn't exist)
-        cache = LocalCache(cache_path)
+        cache = LocalCache(cache_path, host_id=default_host_id)
 
         cache.DEBUG = self.DEBUG
 

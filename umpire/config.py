@@ -1,6 +1,8 @@
-import os.path
+import os.path, socket
 
 default_umpire_root = os.path.join(os.path.expanduser("~"), ".umpire")
+default_host_id = socket.gethostname()
+
 
 # Enable on build nodes, or anywhere that doesn't need SUDO
 autoupdate = False
