@@ -274,7 +274,8 @@ class LocalCache(object):
                         #Otherwise we're busting open..
                         else:
                             print("WARN: Removing lockfile from previous Umpire run")
-                            self.unlock(lockfile, force=True)
+                            self.unlock(path, force=True)
+                            continue
                     else: #We really don't know what's going on with this entry, we'll wait the timeout at most before forcing an unlock
                         if self.DEBUG:
                             print("INFO: Umpire is waiting " + str((int(config.LOCKFILE_TIMEOUT)-int(timeout_counter)))  + " for an entry to unlock.")
@@ -312,7 +313,7 @@ class LocalCache(object):
         pid = -1
         #Read back lockfile
         lock_id,lock_pid = get_lockfile_info(lockfile)
-        if lock_id == self.host_id and lock_pid == os.getpid():
+        if (lock_id == self.host_id and lock_pid == os.getpid()) or force is True:
             os.remove(lockfile)
         else:
             raise EntryLockError("This process (" + str(os.getpid()) + ") is not the owner (" + str(pid) + ") of the lockfile it's trying to unlock: " + str(lockfile))
