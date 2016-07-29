@@ -14,7 +14,7 @@ deployment_json = """
         "items":[
             {
                 "name":"test",
-                "version":"test",
+                "version":"test_zip",
                 "platform":"test",
                 "link":false,
                 "unpack":false,
@@ -65,5 +65,5 @@ class tc5(unittest.TestCase):
         deploy.DEBUG = True
         print("Starting deploy and waiting for finish.")
         deploy.run(None)
-        self.assertTrue(os.path.exists(os.path.join(self.tempdir,"./deployment/testA/test_package.tar.gz")))
-        self.assertFalse(os.path.islink(os.path.join(self.tempdir,"./deployment/testA/test_package.tar.gz")))
+        self.assertTrue(os.path.exists(os.path.join(self.tempdir,"./deployment/testA/test_package.zip")))
+        self.assertFalse(os.path.islink(os.path.join(self.tempdir,"./deployment/testA/test_package.zip")))

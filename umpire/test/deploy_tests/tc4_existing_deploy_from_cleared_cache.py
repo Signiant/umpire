@@ -14,13 +14,13 @@ deployment_json = """
         "items":[
             {
                 "name":"test",
-                "version":"test",
+                "version":"test_tgz",
                 "platform":"test",
                 "destination":"$tc4/testA"
             },
             {
                 "name":"test",
-                "version":"test",
+                "version":"test_zip",
                 "platform":"test",
                 "destination":"$tc4/testB"
             }
