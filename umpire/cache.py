@@ -287,7 +287,7 @@ class LocalCache(object):
                     time.sleep(10)
 
                 #Write lockfile
-                with open(lockfile, 'w') as lf:
+                with open(lockfile, 'w+') as lf:
                     lf.write(str(self.host_id) + "::" + str(os.getpid()))
                     lf.close()
 
@@ -375,13 +375,3 @@ class LocalCache(object):
     def set_remote(url):
         pass #TODO: Future
 
-
-#TODO: Write command line module
-if __name__ == "__main__":
-    try:
-        cache = create_local_cache("./test", "s3://bucketname")
-        cache.put("../../poco-1.4.6p2-win64.tar.gz", "win64","poco","1.4.6p2", keep_original = True)
-        cache.get("win64","poco","1.4.6p2")
-    finally:
-        #pass
-        shutil.rmtree("./test")
