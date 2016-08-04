@@ -246,7 +246,6 @@ class LocalCache(object):
         """
         Locks a cache entry in order to perform actions on the cache.
         """
-
         lockfile = os.path.join(path, LOCK_FILENAME)
         timeout_counter = 0
         while(True):
@@ -319,10 +318,12 @@ class LocalCache(object):
             raise EntryLockError("This process (" + str(os.getpid()) + ") is not the owner (" + str(pid) + ") of the lockfile it's trying to unlock: " + str(lockfile))
 
     #Puts an archive of files into the cache
-    def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
+    def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False, checksum = None):
 
-        #Generate md5
-        local_checksum = maestro.tools.file.md5_checksum(archive_path)
+        if checksum is None:
+            #Generate md5
+            checksum = maestro.tools.file.md5_checksum(archive_path)
+
 
         #Get Archive filename
         archive_filename = os.path.split(archive_path)[1]
@@ -359,7 +360,7 @@ class LocalCache(object):
         entry.version = version
         entry.platform = platform
         entry.path = entry_root
-        entry.md5 = local_checksum
+        entry.md5 = checksum
 
         #Write the entry
         write_entry(entry)
@@ -375,13 +376,3 @@ class LocalCache(object):
     def set_remote(url):
         pass #TODO: Future
 
-
-#TODO: Write command line module
-if __name__ == "__main__":
-    try:
-        cache = create_local_cache("./test", "s3://bucketname")
-        cache.put("../../poco-1.4.6p2-win64.tar.gz", "win64","poco","1.4.6p2", keep_original = True)
-        cache.get("win64","poco","1.4.6p2")
-    finally:
-        #pass
-        shutil.rmtree("./test")

@@ -94,6 +94,11 @@ class DeploymentModule(module.AsyncModule):
                 except KeyError:
                     #Debugging logging
                     pass
+                keep_updated = False
+                try:
+                    keep_updated = item["keep_updated"]
+                except KeyError:
+                    pass
 
                 #Configure a Fetch module for each entry
                 fetcher = fetch.FetchModule(None)
@@ -104,6 +109,7 @@ class DeploymentModule(module.AsyncModule):
                 fetcher.dependency_is_link = link
                 fetcher.dependency_unpack = unpack
                 fetcher.cache_root = self.cache_root
+                fetcher.keep_updated = keep_updated
                 fetcher.DEBUG = self.DEBUG
                 #TODO: Figure out how to move this out of deploy
                 try:
