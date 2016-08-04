@@ -53,6 +53,9 @@ class FetchModule(module.AsyncModule):
     #Is the dependency going to be extracted after the download
     dependency_unpack = None
 
+    #Are we going to check if this dependency has changed in the remote?
+    keep_updated = None
+
     def run(self,kwargs):
 
         #Verify argument validity
@@ -69,6 +72,8 @@ class FetchModule(module.AsyncModule):
 
         cache.DEBUG = self.DEBUG
 
+        full_url = s3.join_s3_url(self.dependency_repo, self.dependency_platform, self.dependency_name, self.dependency_version)
+
         cache.lock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
         #Try to get entry from cache
         entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
@@ -80,11 +85,20 @@ class FetchModule(module.AsyncModule):
             state = EntryState.CACHE
 
         #Verify Remote MD5
+        if self.keep_updated and state == EntryState.CACHE:
+            #TODO: Kinda hacky, but the maestro underlying code needs some refactoring. This will do what I want without changing it
+            bucket,prefix = s3.parse_s3_url(full_url)
+            checksum = s3.find_files(bucket,prefix)[0][1]
+            if checksum != entry.md5:
+                state = EntryState.UPDATED
 
         #We need to download the file, it wasn't in the cache
-        if entry is None:
-            print (self.format_entry_name() + ": Not in cache")
-            full_url = s3.join_s3_url(self.dependency_repo, self.dependency_platform, self.dependency_name, self.dependency_version)
+        if state == EntryState.DOWNLOADED or state == EntryState.UPDATED:
+
+            if state == EntryState.DOWNLOADED:
+                print (self.format_entry_name() + ": Not in cache")
+            else:
+                print (self.format_entry_name() + ": Cache is obsolete")
 
             print (self.format_entry_name() + ": Downloading " + full_url)
 
@@ -143,6 +157,8 @@ class FetchModule(module.AsyncModule):
         if not self.dependency_is_link:
             # Not used
             pass
+        if not self.keep_updated:
+            self.keep_updated = False
         if not isinstance(self.dependency_unpack,bool):
             print str(self.dependency_unpack)
             raise ValueError("You must specify whether the dependency should be unpacked or not")
