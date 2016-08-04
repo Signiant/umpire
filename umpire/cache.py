@@ -246,7 +246,6 @@ class LocalCache(object):
         """
         Locks a cache entry in order to perform actions on the cache.
         """
-
         lockfile = os.path.join(path, LOCK_FILENAME)
         timeout_counter = 0
         while(True):
@@ -287,7 +286,7 @@ class LocalCache(object):
                     time.sleep(10)
 
                 #Write lockfile
-                with open(lockfile, 'w+') as lf:
+                with open(lockfile, 'w') as lf:
                     lf.write(str(self.host_id) + "::" + str(os.getpid()))
                     lf.close()
 
@@ -319,10 +318,12 @@ class LocalCache(object):
             raise EntryLockError("This process (" + str(os.getpid()) + ") is not the owner (" + str(pid) + ") of the lockfile it's trying to unlock: " + str(lockfile))
 
     #Puts an archive of files into the cache
-    def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False):
+    def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False, checksum = None):
 
-        #Generate md5
-        local_checksum = maestro.tools.file.md5_checksum(archive_path)
+        if checksum is None:
+            #Generate md5
+            checksum = maestro.tools.file.md5_checksum(archive_path)
+
 
         #Get Archive filename
         archive_filename = os.path.split(archive_path)[1]
@@ -359,7 +360,7 @@ class LocalCache(object):
         entry.version = version
         entry.platform = platform
         entry.path = entry_root
-        entry.md5 = local_checksum
+        entry.md5 = checksum
 
         #Write the entry
         write_entry(entry)
