@@ -149,98 +149,18 @@ class DeploymentModule(module.AsyncModule):
                     for entry in files:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
                         if (os.path.exists(destination_file) and os.path.islink(destination_file) and state == fetch.EntryState.CACHE):
-                            print (fetcher.format_entry_name() + ": Already deployed at latest.")
+                            print (fetcher.format_entry_name() + ": Already deployed.")
                             fetcher.status = module.PROCESSED
                             break
                         elif (os.path.exists(destination_file) and state == fetch.EntryState.DOWNLOADED):
                             print (fetcher.format_entry_name() + ": Re-deploying " + destination_file)
-                            try:
-                                if os.path.isdir(destination_file):
-                                    try:
-                                        os.rmdir(destination_file)
-                                    except OSError as e:
-                                        shutil.rmtree(destination_file)
-                                else:
-                                    os.unlink(destination_file)
-                            except OSError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
-                            try:
-                                if fetcher.dependency_is_link:
-                                    path.symlink(entry, destination_file)
-                                elif os.path.isdir(entry):
-                                    dir_util.copy_tree(entry, destination_file)
-                                else:
-                                    shutil.copyfile(entry, destination_file)
-                            except WindowsError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
-                            except OSError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
+                            self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
                         elif (os.path.exists(destination_file) and state == fetch.EntryState.UPDATED):
                             print (fetcher.format_entry_name() + ": Updating " + destination_file)
-                            try:
-                                if os.path.isdir(destination_file):
-                                    try:
-                                        os.rmdir(destination_file)
-                                    except OSError as e:
-                                        shutil.rmtree(destination_file)
-                                else:
-                                    os.unlink(destination_file)
-                            except OSError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
-                            try:
-                                if fetcher.dependency_is_link:
-                                    path.symlink(entry, destination_file)
-                                elif os.path.isdir(entry):
-                                    dir_util.copy_tree(entry, destination_file)
-                                else:
-                                    shutil.copyfile(entry, destination_file)
-                            except WindowsError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
-                            except OSError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
+                            self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
                         else:
-                            if os.path.exists(destination_file):
-                                try:
-                                    if os.path.isdir(destination_file):
-                                        try:
-                                            os.rmdir(destination_file)
-                                        except OSError as e:
-                                            shutil.rmtree(destination_file)
-                                    else:
-                                        os.unlink(destination_file)
-                                except OSError as e:
-                                    if(self.DEBUG):
-                                        traceback.print_exc()
-                                    raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
-                            try:
-                                if fetcher.dependency_is_link:
-                                    print (fetcher.format_entry_name() + ": Linking " + destination_file)
-                                    path.symlink(entry, destination_file)
-                                elif os.path.isdir(entry):
-                                    dir_util.copy_tree(entry, destination_file)
-                                else:
-                                    shutil.copyfile(entry, destination_file)
-                            except WindowsError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
-                            except OSError as e:
-                                if(self.DEBUG):
-                                    traceback.print_exc()
-                                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
-
+                            print (fetcher.format_entry_name() + ": Deploying " + destination_file)
+                            self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
                         #TODO: Kinda hacky, no significance other than to make it not DONE
                         fetcher.status = module.PROCESSED
 
@@ -248,3 +168,34 @@ class DeploymentModule(module.AsyncModule):
                     done_count += 1
             time.sleep(0.1)
         return exit_code
+
+    def __remove_and_deploy_to_destination__(self, fetcher, entry, destination_file):
+        if os.path.exists(destination_file):
+            try:
+                if os.path.isdir(destination_file):
+                    try:
+                        os.rmdir(destination_file)
+                    except OSError as e:
+                        shutil.rmtree(destination_file)
+                else:
+                    os.unlink(destination_file)
+            except OSError as e:
+                if(self.DEBUG):
+                    traceback.print_exc()
+                    raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
+        try:
+            if fetcher.dependency_is_link:
+                path.symlink(entry, destination_file)
+            elif os.path.isdir(entry):
+                dir_util.copy_tree(entry, destination_file)
+            else:
+                shutil.copyfile(entry, destination_file)
+        except WindowsError as e:
+            if(self.DEBUG):
+                traceback.print_exc()
+                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
+        except OSError as e:
+            if(self.DEBUG):
+                traceback.print_exc()
+                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
+
