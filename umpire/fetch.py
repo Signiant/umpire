@@ -88,7 +88,10 @@ class FetchModule(module.AsyncModule):
         if self.keep_updated and state == EntryState.CACHE:
             #TODO: Kinda hacky, but the maestro underlying code needs some refactoring. This will do what I want without changing it
             bucket,prefix = s3.parse_s3_url(full_url)
-            checksum = s3.find_files(bucket,prefix)[0][1]
+            try:
+                checksum = s3.find_files(bucket,prefix,anonymous=False)[1][1]
+            except:
+                checksum = s3.find_files(bucket,prefix,anonymous=True)[1][1]
             if checksum != entry.md5:
                 state = EntryState.UPDATED
 
@@ -133,7 +136,7 @@ class FetchModule(module.AsyncModule):
                 if self.dependency_unpack:
                     print (self.format_entry_name() + ": Unpacking...")
                 #Put will unlock
-                cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack=self.dependency_unpack)
+                cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack=self.dependency_unpack, checksum=checksum)
             entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
             if entry is None:
                 raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")
@@ -143,7 +146,7 @@ class FetchModule(module.AsyncModule):
 
 
     def format_entry_name(self):
-        return str(self.dependency_platform) + "/" + str(self.dependency_name) + " v" + str(self.dependency_version)
+        return str(self.dependency_platform) + "/" + str(self.dependency_name) + " " + str(self.dependency_version)
 
     def __verify_arguments__(self):
         if not self.dependency_repo:

@@ -17,6 +17,7 @@ deployment_json = """
                 "version":"test_tgz",
                 "platform":"test",
                 "keep_updated":true,
+                "link":false,
                 "destination":"$tc6/testA"
             },
             {
@@ -24,7 +25,6 @@ deployment_json = """
                 "version":"test_zip",
                 "platform":"test",
                 "keep_updated":true,
-                "link":false,
                 "destination":"$tc6/testB"
             }
         ]
@@ -74,7 +74,7 @@ class TC6(unittest.TestCase):
         deploy.run(None)
 
         #A: Verify content is good
-        self.assertTrue(os.path.islink(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")))
+        self.assertFalse(os.path.islink(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")))
         with open(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")) as f:
             lines = f.readlines()
             self.assertEqual(lines[0],"HI!\n")
@@ -89,7 +89,7 @@ class TC6(unittest.TestCase):
             self.assertEqual(lines[0],"BLAHBLAHBLAH\n")
 
         #B: Verify content is good
-        self.assertFalse(os.path.islink(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")))
+        self.assertTrue(os.path.islink(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")))
         with open(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")) as f:
             lines = f.readlines()
             self.assertEqual(lines[0],"HI!\n")
@@ -103,12 +103,9 @@ class TC6(unittest.TestCase):
             lines = f.readlines()
             self.assertEqual(lines[0],"BLAHBLAHBLAH\n")
 
-        #Modify checksums
+        #Modify checksums of ONLY the first one
         import fileinput, re
         for line in fileinput.input(os.path.join(self.cache_root,"./umpire-test.s3/test/test/test_tgz/.umpire"), inplace = True):
-            print re.sub("md5 = ([^\s]+)","md5 = aaaaaaaaa",line)
-
-        for line in fileinput.input(os.path.join(self.cache_root,"./umpire-test.s3/test/test/test_zip/.umpire"), inplace = True):
             print re.sub("md5 = ([^\s]+)","md5 = aaaaaaaaa",line)
 
         #Rerun deploy
@@ -121,14 +118,14 @@ class TC6(unittest.TestCase):
         deploy.run(None)
 
         #A: Verify content is good
-        self.assertTrue(os.path.islink(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")))
+        self.assertFalse(os.path.islink(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")))
         with open(os.path.join(self.tempdir,"./deployment/testA/this_is_test_data")) as f:
             lines = f.readlines()
             self.assertEqual(lines[0],"HI!\n")
 
         #B: Verify content is good
-        self.assertFalse(os.path.islink(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")))
+        self.assertTrue(os.path.islink(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")))
         with open(os.path.join(self.tempdir,"./deployment/testB/this_is_test_data")) as f:
             lines = f.readlines()
-            self.assertEqual(lines[0],"HI!\n")
+            self.assertEqual(lines[0],"BLAHBLAHBLAH\n")
 
