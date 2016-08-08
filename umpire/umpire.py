@@ -3,7 +3,7 @@ from maestro.core import execute
 from maestro.aws import s3
 from maestro.tools import path
 
-__version__ = "0.5.1"
+__version__ = "0.5.3"
 
 import sys,os
 
@@ -55,6 +55,7 @@ class Umpire(execute.ModuleExecuter):
             elif item == "--version":
                 from subprocess import call
                 call(["pip","show","umpire"])
+                sys.exit(0)
             elif item == "-s" or item == "--skip-update":
                 self.skip_update = True
             elif item == "-d" or item == "--debug":
@@ -99,13 +100,7 @@ class Umpire(execute.ModuleExecuter):
 
         deployer.DEBUG = self.debug
 
-        try:
-            #Run it
-            self.exit_code = deployer.run(kwargs)
-        except KeyboardInterrupt:
-            print("Got KeyboardInterrupt. Cleaning lock files.")
-            path.purge(".umplock", get_umpire_root())
-            sys.exit(1)
+        self.exit_code = deployer.run(kwargs)
 
 def get_umpire_root():
     hardcoded_root = "./umpire_tmp"

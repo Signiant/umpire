@@ -6,19 +6,6 @@ Using an S3 backed repository of compressed packages, Umpire reads a simple JSON
 
 Umpire is being developed as an easy to install command line tool, with it's flexibility being derived from the JSON file options.
 
-### Version History
-
-**v0.4.2**   Stability fixes, copy + don't unpack support
-  - Added support for optional unpacking 
-  - Added support for copy vs link
-
-**v0.4.0**   Environment variable support, Help & error message updates
-  - Added support for environment variables in deploy files
-  - Added warning message when umpire encounters a locked cache entry, workaround to issue #1
-  - Updated the help text
-  - Improved error reporting
-  - Updated this Readme
-
 ### Installation
 Installing Umpire is easy. All you need is the pip package manager, and Python version 2.7.x (Windows **requires** version **2.7.11**).
 
@@ -33,27 +20,36 @@ Don't have pip? Get it [here.](https://pypi.python.org/pypi/pip)
 Below is an example deployment JSON file, taken from one of our projects at Signiant. The URL is composed of the identifier (s3://) and the bucket name, which currently must be anonymously accessible.
 
 The items array contains the list of dependencies. Each one requires a platform, name and version. In the s3 bucket they need to be stored with the prefix: **$PLATFORM/$NAME/$VERSION**. Umpire does a case insensitive match against this naming convention to find the appropriate dependency. It will download all files matching the prefix in the bucket, and will attempt to unpack them for future deployment.
+
+There's also a couple of other options that you can specify. They are:
+
+**link**: [true/false] -- Specifies whether umpire should link the dependency files to the destination or copy them. Default true.
+
+**keep_updated**: [true/false] -- Specifies whether umpire should check with the remote S3 bucket when run to see if the dependency has been changed. Default false.
+
 ```
 [
-  {
-    "url":"s3://thirdpartydependencies/",
-    "items":[
-	      {
-	        "name":"zlib",
-	        "version":"1.2.8",
-	        "platform":"win64",
-	        "destination":"./destination/zlib/"
-            "link":"false"
-	      },
-	      {
-		    "name":"swigwin",
-		    "version":"3.0.2",
-		    "platform":"win64",
-		    "destination":"./destination/swigwin/"
-	      }
-	    ]
-   }
-]
+     {
+         "url":"s3://umpire-test/",
+         "items":[
+             {
+                 "name":"test",
+                 "version":"test_tgz",
+                 "platform":"test",
+                 "keep_updated":true,
+                 "link":false,
+                 "destination":"$ENVIRONMENT_VARIABLE/destination"
+             },
+             {
+                 "name":"test",
+                 "version":"test_zip",
+                 "platform":"test",
+                 "keep_updated":true,
+                 "destination":"./destination"
+             }
+         ]
+     }
+ ]
 ```
 
 ### Development

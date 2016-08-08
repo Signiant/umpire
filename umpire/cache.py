@@ -1,8 +1,7 @@
 """
 repo.py contains code to control the local cache for umpire. It is not a module.
 """
-#TODO: Add support for zip, tbz/tar.bz
-#TODO: Write command line module
+#TODO: Add support for tbz/tar.bz
 
 import os, shutil, time, traceback
 import ConfigParser
@@ -324,7 +323,6 @@ class LocalCache(object):
             #Generate md5
             checksum = maestro.tools.file.md5_checksum(archive_path)
 
-
         #Get Archive filename
         archive_filename = os.path.split(archive_path)[1]
 
@@ -333,14 +331,11 @@ class LocalCache(object):
         entry_root = os.path.join(self.local_path, platform, name, version)
         case_insensitive_path = maestro.tools.path.get_case_insensitive_path(entry_root)
 
-        #Create directories for lock file if needed
-        try:
-            os.makedirs(entry_root)
-        except OSError as e:
-            pass
+        #Purge all files in the cache location already that aren't .umplock
+        maestro.tools.path.purge("(?!\.umplock).*", case_insensitive_path, match_directories=True)
 
         #Copy archive to cache location
-        shutil.copy(archive_path, entry_root)
+        shutil.copy(archive_path, case_insensitive_path)
 
         #Remove original if we want
         if keep_original is False:
@@ -350,7 +345,7 @@ class LocalCache(object):
 
        #Unpack if necessary
         if unpack is True:
-            unpacker.destination_path = entry_root
+            unpacker.destination_path = case_insensitive_path
             unpacker.file_path = full_path
             unpacker.delete_archive = not keep_archive
             unpacker.start()
@@ -359,7 +354,7 @@ class LocalCache(object):
         entry.name = name
         entry.version = version
         entry.platform = platform
-        entry.path = entry_root
+        entry.path = case_insensitive_path
         entry.md5 = checksum
 
         #Write the entry
