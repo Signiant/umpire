@@ -88,11 +88,17 @@ class FetchModule(module.AsyncModule):
         if self.keep_updated and state == EntryState.CACHE:
             #TODO: Kinda hacky, but the maestro underlying code needs some refactoring. This will do what I want without changing it
             bucket,prefix = s3.parse_s3_url(full_url)
+            checksums = list()
             try:
-                checksum = s3.find_files(bucket,prefix,anonymous=False)[1][1]
+                for file in s3.find_files(bucket,prefix,anonymous=False):
+                    checksums.append(file[1])
             except:
-                checksum = s3.find_files(bucket,prefix,anonymous=True)[1][1]
-            if checksum != entry.md5:
+                if self.DEBUG:
+                    traceback.print_exc()
+                for file in s3.find_files(bucket,prefix,anonymous=True):
+                    checksums.append(file[1])
+
+            if entry.md5 not in checksums:
                 state = EntryState.UPDATED
 
         #We need to download the file, it wasn't in the cache

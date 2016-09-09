@@ -35,6 +35,39 @@ from cache import CacheError
 CACHE_ROOT_KEYS = ["c", "with-cache"]
 HELP_KEYS = ["h", "help"]
 
+## The following code
+
+
+## The following code backports an islink solution for windows in python 2.7.x
+## It gets assigned to a function called "islink"
+def islink_windows(path):
+    if os.path.exists(path):
+        if os.path.isdir(path):
+            FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
+            attributes = ctypes.windll.kernel32.GetFileAttributesW(unicode(path))
+            return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) > 0
+        else:
+            command = ['dir', path]
+            try:
+                with open(os.devnull, 'w') as NULL_FILE:
+                    o0 = check_output(command, stderr=NULL_FILE, shell=True)
+            except CalledProcessError as e:
+                print e.output
+                return False
+            o1 = [s.strip() for s in o0.split('\n')]
+            if len(o1) < 6:
+                return False
+            else:
+                return 'SYMLINK' in o1[5]
+    else:
+        return False
+
+islink = os.path.islink
+if os.name == "nt":
+    import ctypes
+    from subprocess import CalledProcessError, check_output
+    islink = islink_windows
+
 class DeploymentError(Exception):
     pass
 
@@ -148,16 +181,19 @@ class DeploymentModule(module.AsyncModule):
                     state = fetcher.result[1]
                     for entry in files:
                         destination_file = os.path.join(destination,os.path.split(entry)[1])
-                        if (os.path.exists(destination_file) and os.path.islink(destination_file) and state == fetch.EntryState.CACHE):
+
+                        # If the file exists, and points to the same target as the entry
+                        if (os.path.exists(destination_file) and islink(destination_file) and state == fetch.EntryState.CACHE and os.path.realpath(entry) == os.path.realpath(destination_file)):
                             print (fetcher.format_entry_name() + ": Already deployed.")
                             fetcher.status = module.PROCESSED
                             break
-                        elif (os.path.exists(destination_file) and state == fetch.EntryState.DOWNLOADED):
-                            print (fetcher.format_entry_name() + ": Re-deploying " + destination_file)
-                            self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
-                        elif (os.path.exists(destination_file) and state == fetch.EntryState.UPDATED):
+
+                        # If the file exists, but something changed between the entry and the destination_file
+                        elif (os.path.exists(destination_file) and (state == fetch.EntryState.UPDATED or state == fetch.EntryState.CACHE or state == fetch.EntryState.DOWNLOADED)):
                             print (fetcher.format_entry_name() + ": Updating " + destination_file)
                             self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
+
+                        # Wasn't in the cache, or updated.
                         else:
                             print (fetcher.format_entry_name() + ": Deploying " + destination_file)
                             self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
@@ -172,7 +208,7 @@ class DeploymentModule(module.AsyncModule):
     def __remove_and_deploy_to_destination__(self, fetcher, entry, destination_file):
         if os.path.exists(destination_file):
             try:
-                if os.path.isdir(destination_file):
+                if os.path.isdir(destination_file) and not islink(destination_file):
                     try:
                         os.rmdir(destination_file)
                     except OSError as e:
