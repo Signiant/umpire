@@ -17,7 +17,7 @@ Don't have pip? Get it [here.](https://pypi.python.org/pypi/pip)
 
 ### Examples
 
-Below is an example deployment JSON file, taken from one of our projects at Signiant. The URL is composed of the identifier (s3://) and the bucket name, which currently must be anonymously accessible.
+Below is an example deployment JSON file. The URL is composed of the identifier (s3://) and the bucket name. When using an authenticated bucket, the user must have either the AWS\_ACCESS\_KEY\_ID and AWS\_SECRET\_ACCESS\_KEY variables set or a properly configured credentials file for your platform.
 
 The items array contains the list of dependencies. Each one requires a platform, name and version. In the s3 bucket they need to be stored with the prefix: **$PLATFORM/$NAME/$VERSION**. Umpire does a case insensitive match against this naming convention to find the appropriate dependency. It will download all files matching the prefix in the bucket, and will attempt to unpack them for future deployment.
 
@@ -60,10 +60,8 @@ We'll gladly take any help in bug fixes, or feature updates if it fits within ou
 
 ##### Todos
 
- - Enhanced MD5 verification support
  - Publishing support
- - Authenticated S3 access
- - Zip, Bzip support
+ - Bzip support
  - Optional unpacking
  - File exclusion
 
