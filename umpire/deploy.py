@@ -1,77 +1,31 @@
 """deploy.py"""
 
-HELPTEXT = """
-                  ----- Umpire -----
-
-Umpire reads a properly formatted JSON deployment file to deploy files.
-Examples can be found on GitHub: https://github.com/Signiant/umpire
-
-Usage:  umpire <deployment_file>
-
-Options:
---clear-cache, -c:   Clears the default Umpire cache of all packages
---help, -h:          Displays this help text
---repair-cache, -r:  Removes lock files from the cache
---version:           Displays the current version of Umpire
-
-"""
-
 # Define WindowError if we're on Linux
 try:
     WindowsError
 except NameError:
     WindowsError = None
 
-
 import sys, os, json, time, traceback, shutil
+import maestro
 from distutils import dir_util
 from maestro.core import module
 from maestro.tools import path
+from snapp.module import AsyncModule
 
 #Local modules
-import fetch, cache
-from cache import CacheError
+from umpire import fetch, cache
+from umpire.cache import CacheError
 
-CACHE_ROOT_KEYS = ["c", "with-cache"]
-HELP_KEYS = ["h", "help"]
-
-## The following code
-
-
-## The following code backports an islink solution for windows in python 2.7.x
-## It gets assigned to a function called "islink"
-def islink_windows(path):
-    if os.path.exists(path):
-        if os.path.isdir(path):
-            FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
-            attributes = ctypes.windll.kernel32.GetFileAttributesW(unicode(path))
-            return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) > 0
-        else:
-            command = ['dir', path]
-            try:
-                with open(os.devnull, 'w') as NULL_FILE:
-                    o0 = check_output(command, stderr=NULL_FILE, shell=True)
-            except CalledProcessError as e:
-                print e.output
-                return False
-            o1 = [s.strip() for s in o0.split('\n')]
-            if len(o1) < 6:
-                return False
-            else:
-                return 'SYMLINK' in o1[5]
-    else:
-        return False
-
-islink = os.path.islink
+# Assign islink as appropriate 
+from os.path import islink
 if os.name == "nt":
-    import ctypes
-    from subprocess import CalledProcessError, check_output
-    islink = islink_windows
+    from .tools.windows import islink_windows as islink
 
 class DeploymentError(Exception):
     pass
 
-class DeploymentModule(module.AsyncModule):
+class DeploymentModule(AsyncModule):
     # Required ID of this module
     id = "deploy"
 
@@ -80,7 +34,7 @@ class DeploymentModule(module.AsyncModule):
 
     #Deployment File
     deployment_file = None
-
+    
     #Set to true to view tracebacks for exceptions
     DEBUG = False
 
@@ -88,7 +42,7 @@ class DeploymentModule(module.AsyncModule):
         print(self.help_text)
         exit(0)
 
-    def run(self,kwargs):
+    def run(self,context):
         try:
             with open(self.deployment_file) as f:
                 data = json.load(f)
@@ -218,7 +172,7 @@ class DeploymentModule(module.AsyncModule):
             except OSError as e:
                 if(self.DEBUG):
                     traceback.print_exc()
-                    raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
+                raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
         try:
             if fetcher.dependency_is_link:
                 path.symlink(entry, destination_file)
@@ -229,9 +183,9 @@ class DeploymentModule(module.AsyncModule):
         except WindowsError as e:
             if(self.DEBUG):
                 traceback.print_exc()
-                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
+            raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
         except OSError as e:
             if(self.DEBUG):
                 traceback.print_exc()
-                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
+            raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
 

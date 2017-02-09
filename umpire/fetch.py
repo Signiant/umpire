@@ -1,8 +1,8 @@
 """fetch.py"""
 
 import sys, os, urllib, time, traceback
-from cache import LocalCache
-from config import default_host_id
+from umpire.cache import LocalCache
+from .config import default_host_id
 from multiprocessing import Value
 from maestro.core import module
 from maestro.aws import s3
@@ -127,7 +127,7 @@ class FetchModule(module.AsyncModule):
             if downloader.exception is not None:
                 raise downloader.exception
 
-            print self.format_entry_name() + ": Download complete"
+            print(self.format_entry_name() + ": Download complete")
 
             if downloader.result is None or len(downloader.result) == 0:
                 raise EntryError(self.format_entry_name() + ": Unable to find remote entry '" + full_url + "'")
@@ -169,7 +169,7 @@ class FetchModule(module.AsyncModule):
         if not self.keep_updated:
             self.keep_updated = False
         if not isinstance(self.dependency_unpack,bool):
-            print str(self.dependency_unpack)
+            print(str(self.dependency_unpack))
             raise ValueError("You must specify whether the dependency should be unpacked or not")
 
     def get_cache_name(self):

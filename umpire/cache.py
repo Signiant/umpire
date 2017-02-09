@@ -3,15 +3,20 @@ repo.py contains code to control the local cache for umpire. It is not a module.
 """
 #TODO: Add support for tbz/tar.bz
 
-import os, shutil, time, traceback
-import ConfigParser
+import os, shutil, sys, time, traceback
 import maestro.tools.path
 import maestro.tools.file
 import maestro.core.module
-from urlparse import urlparse
-from unpack import UnpackModule
+from umpire.unpack import UnpackModule
 from maestro.tools.os_tools import check_pid
 from . import config
+
+if sys.version_info >= (3, 0):
+    import configparser as ConfigParser
+    from urllib.parse import urlparse
+else:
+    import ConfigParser
+    import urlparse
 
 # Cache constants
 CONFIG_FILENAME = config.CONFIG_FILENAME
@@ -62,7 +67,7 @@ def get_lockfile_info(lockfile):
             lockfile_host_id = lockfile_content[0]
             lockfile_pid = int(lockfile_content[1])
             return lockfile_host_id, lockfile_pid
-        except IndexError, ValueError:
+        except (IndexError, ValueError) as e:
             #Lockfile seems like it might be corrupted. We'll back off. The writing process(es) should have detected this, and will remove and backoff
             raise EntryLockError("Lockfile appears corrupted. Try running 'umpire -r' and retrying.")
 

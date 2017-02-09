@@ -44,9 +44,9 @@ class TC4(unittest.TestCase):
     # preparing to test
     def setUp(self):
         print("Setting up environment")
-        for k, v in self.environment_variables.iteritems():
+        for k, v in self.environment_variables.items():
             os.environ[k] = v
-        print("Creating tmp folder.. " + str(self.tempdir))
+        print(("Creating tmp folder.. " + str(self.tempdir)))
         os.mkdir(self.tempdir)
         print("Creating deployment file..")
         with open(self.deployment_file, "w+") as f:
@@ -58,7 +58,7 @@ class TC4(unittest.TestCase):
         try:
             shutil.rmtree(self.tempdir)
         except:
-            print "Warning, cannot clean up tempdir."
+            print("Warning, cannot clean up tempdir.")
 
     # test routine A
     def test(self):
