@@ -10,7 +10,7 @@ Umpire reads a JSON file to retrieve, cache, and link files to their appropriate
 
 Umpire requires **Python 2.7.15.**
 
-Umpire is available as a [pip package]((https://pypi.python.org/pypi/pip).
+Umpire is available as a [pip package](https://pypi.python.org/pypi/pip).
 
 To install Umpire:
 
