@@ -1,4 +1,4 @@
-# Umpire Dependency Manager
+# Umpire: A Dependency Manager
 
 Umpire is a Python-based generic dependency resolver which aims to be platform agnostic, extensible, and simple to use.
 
@@ -8,11 +8,27 @@ Umpire reads a JSON file to retrieve, cache, and link files to their appropriate
 
 ## Installation
 
-Umpire is available as a [pip package]((https://pypi.python.org/pypi/pip), and requires Python 2.7.15.
+Umpire requires **Python 2.7.15.**
 
-To install Umpire from the command line:
+Umpire is available as a [pip package]((https://pypi.python.org/pypi/pip).
 
+To install Umpire:
+
+1. Download `get-pip.py` from [PyPA](https://pypa.io).
+
+```sh
+$ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 ```
+
+2. Run the Python script to complete the install.
+
+```sh
+$ python get-pip.py
+```
+
+3. Use pip to install Umpire.
+
+```sh
 $ pip install umpire
 ```
 
@@ -55,7 +71,7 @@ There's also a couple of other options that you can specify. They are:
 
 ## Contributing
 
-Want to help out?
+Want to help out? Awesome!
 
 We'll gladly take any help in bug fixes, or feature updates if it fits within our whole vision of Umpire. Feel free to create a fork of the repository, and submit a pull request if you do anything cool.
 
