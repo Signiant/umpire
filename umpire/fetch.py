@@ -115,7 +115,7 @@ class FetchModule(module.AsyncModule):
             downloader = s3.AsyncS3Downloader(None)
 
             #Set Downloader arguments
-            downloader.source_url = full_url
+            downloader.source_url = full_url+"/"
             downloader.destination_path = os.path.join(self.cache_root, "downloading") + os.sep
             downloader.start()
 
@@ -127,8 +127,8 @@ class FetchModule(module.AsyncModule):
             if downloader.exception is not None:
                 raise downloader.exception
 
-            print self.format_entry_name() + ": Download complete"
-
+            print(self.format_entry_name() + ": Download complete")
+            print(downloader.result)
             if downloader.result is None or len(downloader.result) == 0:
                 raise EntryError(self.format_entry_name() + ": Unable to find remote entry '" + full_url + "'")
 
@@ -169,7 +169,7 @@ class FetchModule(module.AsyncModule):
         if not self.keep_updated:
             self.keep_updated = False
         if not isinstance(self.dependency_unpack,bool):
-            print str(self.dependency_unpack)
+            print(str(self.dependency_unpack))
             raise ValueError("You must specify whether the dependency should be unpacked or not")
 
     def get_cache_name(self):
