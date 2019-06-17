@@ -1,6 +1,7 @@
 import os.path, socket
 
-default_umpire_root = os.path.join(os.path.expanduser("~"), ".umpire")
+umpire_root_prefix = os.getenv('UMPIRE_ROOT_DIR', os.path.expanduser("~"))
+default_umpire_root = os.path.join(umpire_root_prefix, ".umpire")
 default_host_id = socket.gethostname()
 
 
