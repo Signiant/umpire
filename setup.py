@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from distutils.core import setup
 
 setup(name='Umpire',
-      version='0.5.5',
+      version='0.5.6',
       description='Generic dependency resolver.',
       author='Matthew Corner',
       author_email='mcorner@signiant.com',
