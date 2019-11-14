@@ -32,6 +32,12 @@ $ python get-pip.py
 $ pip install umpire
 ```
 
+
+If Python crashes when running on MacOS, set the environment variable
+
+```sh
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+```
 ## Examples
 
 Below is an example deployment JSON file. The URL is composed of the identifier (s3://) and the bucket name. When using an authenticated bucket, the user must have either the AWS\_ACCESS\_KEY\_ID and AWS\_SECRET\_ACCESS\_KEY variables set or a properly configured credentials file for your platform.
