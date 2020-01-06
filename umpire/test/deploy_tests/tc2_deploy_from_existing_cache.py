@@ -44,7 +44,7 @@ class TC2(unittest.TestCase):
     # preparing to test
     def setUp(self):
         print("Setting up environment")
-        for k, v in self.environment_variables.iteritems():
+        for k, v in list(self.environment_variables.items()):
             os.environ[k] = v
         print("Creating tmp folder.. " + str(self.tempdir))
         os.mkdir(self.tempdir)

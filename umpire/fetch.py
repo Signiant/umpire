@@ -182,7 +182,7 @@ class FetchModule(module.AsyncModule):
     def __parse_kwargs__(self,kwargs):
         if kwargs is None:
             return
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             if key in CACHE_LOCATION_KEYS:
                 self.cache_repo = val
             elif key in DEPENDENCY_NAME_KEYS:

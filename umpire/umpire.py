@@ -1,4 +1,3 @@
-from __future__ import print_function
 from maestro.core import execute
 from maestro.aws import s3
 from maestro.tools import path
