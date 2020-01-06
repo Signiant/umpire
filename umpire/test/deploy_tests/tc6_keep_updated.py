@@ -61,7 +61,7 @@ class TC6(unittest.TestCase):
         try:
             shutil.rmtree(self.tempdir)
         except:
-            print "Warning, cannot clean up tempdir."
+            print("Warning, cannot clean up tempdir.")
 
     # test routine A
     def test(self):
@@ -106,7 +106,7 @@ class TC6(unittest.TestCase):
         #Modify checksums of ONLY the first one
         import fileinput, re
         for line in fileinput.input(os.path.join(self.cache_root,"./umpire-test.s3/test/test/test_tgz/.umpire"), inplace = True):
-            print re.sub("md5 = ([^\s]+)","md5 = aaaaaaaaa",line)
+            print(re.sub("md5 = ([^\s]+)","md5 = aaaaaaaaa",line))
 
         #Rerun deploy
         print("Getting deployment module")

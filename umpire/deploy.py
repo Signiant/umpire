@@ -52,7 +52,7 @@ def islink_windows(path):
                 with open(os.devnull, 'w') as NULL_FILE:
                     o0 = check_output(command, stderr=NULL_FILE, shell=True)
             except CalledProcessError as e:
-                print e.output
+                print (e.output)
                 return False
             o1 = [s.strip() for s in o0.split('\n')]
             if len(o1) < 6:

@@ -65,7 +65,7 @@ class TC1(unittest.TestCase):
         try:
             shutil.rmtree(self.tempdir)
         except:
-            print "Warning, cannot clean up tempdir."
+            print("Warning, cannot clean up tempdir.")
 
     # test routine A
     def test(self):

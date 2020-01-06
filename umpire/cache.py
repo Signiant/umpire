@@ -62,7 +62,7 @@ def get_lockfile_info(lockfile):
             lockfile_host_id = lockfile_content[0]
             lockfile_pid = int(lockfile_content[1])
             return lockfile_host_id, lockfile_pid
-        except IndexError, ValueError:
+        except (IndexError, ValueError):
             #Lockfile seems like it might be corrupted. We'll back off. The writing process(es) should have detected this, and will remove and backoff
             raise EntryLockError("Lockfile appears corrupted. Try running 'umpire -r' and retrying.")
 
