@@ -1,4 +1,4 @@
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import sys
 
 from .umpire import __version__
@@ -39,12 +39,12 @@ class UpdateModule(module.AsyncModule):
             f.write(version)
 
     def get_remote_version(self):
-        return urllib2.urlopen(config.REMOTE_VERSION_URL).read()
+        return urllib.request.urlopen(config.REMOTE_VERSION_URL).read()
 
     def run(self,kwargs):
         version = self.get_remote_version()
         self.write_remote_version(version)
         for key in UPDATE_KEYS:
-            if key in kwargs.keys():
+            if key in list(kwargs.keys()):
                 __run_pip__()
                 __restart_umpire__()

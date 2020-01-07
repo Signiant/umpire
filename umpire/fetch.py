@@ -1,8 +1,9 @@
 """fetch.py"""
 
 import sys, os, urllib, time, traceback
-from cache import LocalCache
-from config import default_host_id
+from . import cache, config
+# from cache import LocalCache
+# from config import default_host_id
 from multiprocessing import Value
 from maestro.core import module
 from maestro.aws import s3
@@ -68,15 +69,15 @@ class FetchModule(module.AsyncModule):
         cache_path = os.path.join(self.cache_root, cache_name)
 
         #Get cache object (will raise an exception if it doesn't exist)
-        cache = LocalCache(cache_path, host_id=default_host_id)
+        cache_obj = cache.LocalCache(cache_path, host_id=config.default_host_id)
 
-        cache.DEBUG = self.DEBUG
+        cache_obj.DEBUG = self.DEBUG
 
         full_url = s3.join_s3_url(self.dependency_repo, self.dependency_platform, self.dependency_name, self.dependency_version)
 
-        cache.lock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
+        cache_obj.lock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
         #Try to get entry from cache
-        entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
+        entry = cache_obj.get(self.dependency_platform, self.dependency_name, self.dependency_version)
 
         #Set state
         if entry is None:
@@ -142,11 +143,11 @@ class FetchModule(module.AsyncModule):
                 if self.dependency_unpack:
                     print (self.format_entry_name() + ": Unpacking...")
                 #Put will unlock
-                cache.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack=self.dependency_unpack, checksum=checksum)
-            entry = cache.get(self.dependency_platform, self.dependency_name, self.dependency_version)
+                cache_obj.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack=self.dependency_unpack, checksum=checksum)
+            entry = cache_obj.get(self.dependency_platform, self.dependency_name, self.dependency_version)
             if entry is None:
                 raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")
-        cache.unlock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
+        cache_obj.unlock(os.path.join(cache_path,self.dependency_platform, self.dependency_name, self.dependency_version))
         #Entry is not None, return all the files listed in the entry that aren't the configuration files
         return [os.path.abspath(os.path.join(entry.path,f)) for f in os.listdir(entry.path) if f != ".umpire"], state
 
@@ -182,7 +183,7 @@ class FetchModule(module.AsyncModule):
     def __parse_kwargs__(self,kwargs):
         if kwargs is None:
             return
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             if key in CACHE_LOCATION_KEYS:
                 self.cache_repo = val
             elif key in DEPENDENCY_NAME_KEYS:

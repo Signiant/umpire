@@ -29,8 +29,8 @@ from maestro.core import module
 from maestro.tools import path
 
 #Local modules
-import fetch, cache
-from cache import CacheError
+from . import fetch, cache
+# from cache import CacheError
 
 CACHE_ROOT_KEYS = ["c", "with-cache"]
 HELP_KEYS = ["h", "help"]
@@ -148,7 +148,7 @@ class DeploymentModule(module.AsyncModule):
                 try:
                     cache_dir =  os.path.join(fetcher.cache_root, fetcher.get_cache_name())
                     cache.create_local_cache(cache_dir, repo_url)
-                except CacheError:
+                except cache.CacheError:
                     pass #Cache already exists
                 fetcher.start()
                 fetchers.append((fetcher,destination))

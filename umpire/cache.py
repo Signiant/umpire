@@ -4,12 +4,11 @@ repo.py contains code to control the local cache for umpire. It is not a module.
 #TODO: Add support for tbz/tar.bz
 
 import os, shutil, time, traceback
-import ConfigParser
+import configparser
 import maestro.tools.path
 import maestro.tools.file
 import maestro.core.module
-from urlparse import urlparse
-from unpack import UnpackModule
+from . import unpack
 from maestro.tools.os_tools import check_pid
 from . import config
 
@@ -43,7 +42,7 @@ def create_local_cache(local_path, remote_url):
         pass #Directories exist
 
     ## Start creating config
-    config = ConfigParser.SafeConfigParser()
+    config = configparser.SafeConfigParser()
     config.add_section(CONFIG_REPO_SECTION_NAME)
 
     config.set(CONFIG_REPO_SECTION_NAME, "remote_url", remote_url)
@@ -71,10 +70,10 @@ def read_entry(file_location):
         raise EntryError("Unable to find entry file under: " + file_location)
 
     #Get parser
-    parser = ConfigParser.SafeConfigParser()
+    parser = configparser.SafeConfigParser()
     try:#Read
         config = parser.read(file_location)
-    except ConfigParser.ParsingError:
+    except configparser.ParsingError:
         raise EntryError("Error parsing the entry configuration file: " + file_location + " Please contact an administrator for help fixing this problem.")
 
     #Verify the config has been read
@@ -93,7 +92,7 @@ def read_entry(file_location):
     #Attempt to parse the md5
     try:
         entry.md5 = parser.get(CONFIG_ENTRY_SECTION_NAME, "md5")
-    except ConfigParser.Error:
+    except configparser.Error:
         pass #TODO: Future
     if not entry.md5:
         pass #TODO: Future
@@ -101,7 +100,7 @@ def read_entry(file_location):
     #Attempt to parse the entry product name
     try:
         entry.name = parser.get(CONFIG_ENTRY_SECTION_NAME, "name")
-    except ConfigParser.Error:
+    except configparser.Error:
         raise EntryError("Unable to parse name from entry file: " + file_location)
     if not entry.name:
         raise EntryError("Unable to parse name from entry file: " + file_location)
@@ -109,7 +108,7 @@ def read_entry(file_location):
     #Attempt to parse the entry platform name
     try:
         entry.platform = parser.get(CONFIG_ENTRY_SECTION_NAME, "platform")
-    except ConfigParser.Error:
+    except configparser.Error:
         raise EntryError("Unable to parse platform from entry file: " + file_location)
     if not entry.name:
         raise EntryError("Unable to parse platform from entry file: " + file_location)
@@ -117,7 +116,7 @@ def read_entry(file_location):
     #Attempt to parse the entry version
     try:
         entry.version = parser.get(CONFIG_ENTRY_SECTION_NAME, "version")
-    except ConfigParser.Error:
+    except configparser.Error:
         raise EntryError("Unable to parse version from entry file: " + file_location)
     if not entry.name:
         raise EntryError("Unable to parse version from entry file: " + file_location)
@@ -125,14 +124,14 @@ def read_entry(file_location):
     #Attempt to parse the entry config version
     try:
         entry.config_version = parser.get(CONFIG_ENTRY_SECTION_NAME, "config_version")
-    except ConfigParser.Error:
+    except configparser.Error:
         raise EntryError("Unable to parse config_version from entry file: " + file_location)
     if not entry.config_version:
         raise EntryError("Unable to parse config_version from entry file: " + file_location)
 
     try:
         entry.config_version = parser.get(CONFIG_ENTRY_SECTION_NAME, "md5")
-    except ConfigParser.Error:
+    except configparser.Error:
         entry.md5 = None
 
     return entry
@@ -140,7 +139,7 @@ def read_entry(file_location):
 def write_entry(entry):
 
         ## Start creating config
-        config = ConfigParser.SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config_path = os.path.join(entry.path, CONFIG_FILENAME)
         config.add_section(CONFIG_ENTRY_SECTION_NAME)
 
@@ -200,10 +199,10 @@ class LocalCache(object):
         config = None
 
         #Get parser
-        parser = ConfigParser.SafeConfigParser()
+        parser = configparser.SafeConfigParser()
         try:#Read
             config = parser.read(self.settings_file)
-        except ConfigParser.ParsingError:
+        except configparser.ParsingError:
             raise CacheError("Error parsing the cache configuration file. Please contact an administrator for help fixing this problem.")
 
         #Verify the config has been read
@@ -217,7 +216,7 @@ class LocalCache(object):
         #Attempt to parse the data
         try:
             self.remote_url = parser.get(CONFIG_REPO_SECTION_NAME, "remote_url")
-        except ConfigParser.Error:
+        except configparser.Error:
             raise CacheError("Unable to determine the remote URL of this cache" + self.local_path)
 
         if not self.remote_url:
@@ -225,7 +224,7 @@ class LocalCache(object):
 
         try:
             self.config_version = parser.get(CONFIG_REPO_SECTION_NAME, "config_version")
-        except ConfigParser.Error:
+        except configparser.Error:
             raise CacheError("Unable to determine the version of this cache: " + self.local_path)
 
         if not self.config_version:
@@ -341,7 +340,7 @@ class LocalCache(object):
         if keep_original is False:
             os.remove(archive_path)
 
-        unpacker = UnpackModule(None)
+        unpacker = unpack.UnpackModule(None)
 
        #Unpack if necessary
         if unpack is True:
