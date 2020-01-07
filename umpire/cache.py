@@ -8,8 +8,7 @@ import configparser
 import maestro.tools.path
 import maestro.tools.file
 import maestro.core.module
-from urlparse import urlparse
-from unpack import UnpackModule
+from . import unpack
 from maestro.tools.os_tools import check_pid
 from . import config
 
@@ -341,7 +340,7 @@ class LocalCache(object):
         if keep_original is False:
             os.remove(archive_path)
 
-        unpacker = UnpackModule(None)
+        unpacker = unpack.UnpackModule(None)
 
        #Unpack if necessary
         if unpack is True:

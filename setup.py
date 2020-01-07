@@ -16,7 +16,7 @@ setup(name='Umpire',
       url='https://www.signiant.com',
       packages=find_packages(),
       license='MIT',
-      install_requires=['MaestroOps>=0.4.2,<0.5'],
+      install_requires=['MaestroOps>=0.8.6,<0.9'],
       entry_points = {
           'console_scripts': [
               'umpire = umpire.umpire:entry'
