@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='Umpire',
-      version='0.6.0',
+      version='0.6.2',
       description='Generic dependency resolver.',
       long_description=long_description,
       long_description_content_type='text/markdown',
