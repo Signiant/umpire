@@ -316,7 +316,7 @@ class LocalCache(object):
             raise EntryLockError("This process (" + str(os.getpid()) + ") is not the owner (" + str(pid) + ") of the lockfile it's trying to unlock: " + str(lockfile))
 
     #Puts an archive of files into the cache
-    def put(self, archive_path, platform, name, version, unpack=True, force=False, keep_archive = False, keep_original = False, checksum = None):
+    def put(self, archive_path, platform, name, version, unpack_bol=True, force=False, keep_archive = False, keep_original = False, checksum = None):
 
         if checksum is None:
             #Generate md5
@@ -343,7 +343,7 @@ class LocalCache(object):
         unpacker = unpack.UnpackModule(None)
 
        #Unpack if necessary
-        if unpack is True:
+        if unpack_bol is True:
             unpacker.destination_path = case_insensitive_path
             unpacker.file_path = full_path
             unpacker.delete_archive = not keep_archive
@@ -358,7 +358,7 @@ class LocalCache(object):
 
         #Write the entry
         write_entry(entry)
-        if unpack is True:
+        if unpack_bol is True:
             while unpacker.status != maestro.core.module.DONE:
                 time.sleep(0.2)
 

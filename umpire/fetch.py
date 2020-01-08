@@ -143,7 +143,7 @@ class FetchModule(module.AsyncModule):
                 if self.dependency_unpack:
                     print (self.format_entry_name() + ": Unpacking...")
                 #Put will unlock
-                cache_obj.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack=self.dependency_unpack, checksum=checksum)
+                cache_obj.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack_bol=self.dependency_unpack, checksum=checksum)
             entry = cache_obj.get(self.dependency_platform, self.dependency_name, self.dependency_version)
             if entry is None:
                 raise EntryError(self.format_entry_name() + ": Error retrieving entry from cache.")

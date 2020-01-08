@@ -53,7 +53,7 @@ class Umpire(execute.ModuleExecuter):
                 sys.exit(0)
             elif item == "--version":
                 from subprocess import call
-                call(["pip","show","umpire"])
+                call(["pip3","show","umpire"])
                 sys.exit(0)
             elif item == "-s" or item == "--skip-update":
                 self.skip_update = True

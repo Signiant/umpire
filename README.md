@@ -8,7 +8,7 @@ Umpire reads a JSON file to retrieve, cache, and link files to their appropriate
 
 ## Installation
 
-Umpire requires **Python 2.7.15.**
+Umpire requires **Python 3.7.1 or above**
 
 Umpire is available as a [pip package](https://pypi.python.org/pypi/pip).
 
@@ -26,10 +26,10 @@ $ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 $ python get-pip.py
 ```
 
-3. Use pip to install Umpire.
+3. Use latest python3 pip to install Umpire.
 
 ```sh
-$ pip install umpire
+$ pip3 install umpire
 ```
 
 ## Examples
