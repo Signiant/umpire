@@ -31,6 +31,20 @@ $ python get-pip.py
 ```sh
 $ pip3 install umpire
 ```
+## Development
+
+To run a local version of the Umpire
+
+you clone the repo. and then do a 
+```sh
+pip3 install -e <path to the repo> 
+```
+now the umpire will be from your local development repo
+
+You can check by running 
+```sh
+pip3 freeze | grep umpire
+```
 
 ## Examples
 
