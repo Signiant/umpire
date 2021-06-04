@@ -7,12 +7,12 @@ from os import path
 #     long_description = f.read()
 
 setup(name='Umpire',
-      version='0.6.4',
+      version='0.6.5',
       description='Generic dependency resolver.',
       long_description='',
       long_description_content_type='text/markdown',
-      author='Matthew Corner',
-      author_email='mcorner@signiant.com',
+      author='Signiant SRE',
+      author_email='sre@signiant.com',
       url='https://www.signiant.com',
       packages=find_packages(),
       license='MIT',
