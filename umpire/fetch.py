@@ -8,6 +8,8 @@ from multiprocessing import Value
 from maestro.core import module
 from maestro.aws import s3
 from maestro.tools import file as mfile
+import logging
+logger = logging.getLogger(__name__)
 
 CACHE_LOCATION_KEYS = ["c", "cache-location"]
 DEPENDENCY_NAME_KEYS = ["n", "name"]
@@ -58,6 +60,7 @@ class FetchModule(module.AsyncModule):
     keep_updated = None
 
     def run(self,kwargs):
+        logger.debug("Running Fetch")
 
         #Verify argument validity
         self.__verify_arguments__()
@@ -70,8 +73,6 @@ class FetchModule(module.AsyncModule):
 
         #Get cache object (will raise an exception if it doesn't exist)
         cache_obj = cache.LocalCache(cache_path, host_id=config.default_host_id)
-
-        cache_obj.DEBUG = self.DEBUG
 
         full_url = s3.join_s3_url(self.dependency_repo, self.dependency_platform, self.dependency_name, self.dependency_version)
 
@@ -94,8 +95,7 @@ class FetchModule(module.AsyncModule):
                 for file in s3.find_files(bucket,prefix,anonymous=False):
                     checksums.append(file[1])
             except:
-                if self.DEBUG:
-                    traceback.print_exc()
+                logger.debug(f"{traceback.print_exc()}")
                 for file in s3.find_files(bucket,prefix,anonymous=True):
                     checksums.append(file[1])
 
@@ -106,11 +106,11 @@ class FetchModule(module.AsyncModule):
         if state == EntryState.DOWNLOADED or state == EntryState.UPDATED:
 
             if state == EntryState.DOWNLOADED:
-                print (self.format_entry_name() + ": Not in cache")
+                logger.info(self.format_entry_name() + ": Not in cache")
             else:
-                print (self.format_entry_name() + ": Cache is obsolete")
+                logger.info(self.format_entry_name() + ": Cache is obsolete")
 
-            print (self.format_entry_name() + ": Downloading " + full_url)
+            logger.info(self.format_entry_name() + ": Downloading " + full_url)
 
             #Get Downloader
             downloader = s3.AsyncS3Downloader(None)
@@ -128,8 +128,8 @@ class FetchModule(module.AsyncModule):
             if downloader.exception is not None:
                 raise downloader.exception
 
-            print(self.format_entry_name() + ": Download complete")
-            print(downloader.result)
+            logger.info(self.format_entry_name() + ": Download complete")
+            logger.info(downloader.result)
             if downloader.result is None or len(downloader.result) == 0:
                 raise EntryError(self.format_entry_name() + ": Unable to find remote entry '" + full_url + "'")
 
@@ -137,11 +137,11 @@ class FetchModule(module.AsyncModule):
             for item, checksum in downloader.result:
                 local_file_checksum = mfile.md5_checksum(item)
                 if checksum != local_file_checksum:
-                    print(self.format_entry_name() + ": WARNING: Downloaded file does not match the checksum on the server")
-                    print(self.format_entry_name() + ": WARNING: local:\t" + str(local_file_checksum))
-                    print(self.format_entry_name() + ": WARNING: server:\t" + str(checksum))
+                    logger.info(self.format_entry_name() + ": WARNING: Downloaded file does not match the checksum on the server")
+                    logger.info(self.format_entry_name() + ": WARNING: local:\t" + str(local_file_checksum))
+                    logger.info(self.format_entry_name() + ": WARNING: server:\t" + str(checksum))
                 if self.dependency_unpack:
-                    print (self.format_entry_name() + ": Unpacking...")
+                    logger.info (self.format_entry_name() + ": Unpacking...")
                 #Put will unlock
                 cache_obj.put(item,self.dependency_platform, self.dependency_name, self.dependency_version, unpack_bol=self.dependency_unpack, checksum=checksum)
             entry = cache_obj.get(self.dependency_platform, self.dependency_name, self.dependency_version)
@@ -170,7 +170,7 @@ class FetchModule(module.AsyncModule):
         if not self.keep_updated:
             self.keep_updated = False
         if not isinstance(self.dependency_unpack,bool):
-            print(str(self.dependency_unpack))
+            logger.info(str(self.dependency_unpack))
             raise ValueError("You must specify whether the dependency should be unpacked or not")
 
     def get_cache_name(self):

@@ -5,9 +5,11 @@ from .umpire import __version__
 from . import config
 import umpire, os
 from maestro.core import module
+import logging
 
 HELP_KEYS = ["h", "help"]
 UPDATE_KEYS = ["u", "update"]
+logger = logging.getLogger(__name__)
 
 def parse_version_string(version):
     """
@@ -42,6 +44,7 @@ class UpdateModule(module.AsyncModule):
         return urllib.request.urlopen(config.REMOTE_VERSION_URL).read()
 
     def run(self,kwargs):
+        logger.debug("Running update")
         version = self.get_remote_version()
         self.write_remote_version(version)
         for key in UPDATE_KEYS:

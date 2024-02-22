@@ -23,10 +23,11 @@ except NameError:
     WindowsError = None
 
 
-import sys, os, json, time, traceback, shutil
+import sys, os, json, time, traceback, shutil, logging
 from distutils import dir_util
 from maestro.core import module
 from maestro.tools import path
+from tqdm import tqdm
 
 #Local modules
 from . import fetch, cache
@@ -34,9 +35,9 @@ from . import fetch, cache
 
 CACHE_ROOT_KEYS = ["c", "with-cache"]
 HELP_KEYS = ["h", "help"]
+logger = logging.getLogger(__name__)
 
 ## The following code
-
 
 ## The following code backports an islink solution for windows in python 2.7.x
 ## It gets assigned to a function called "islink"
@@ -52,7 +53,7 @@ def islink_windows(path):
                 with open(os.devnull, 'w') as NULL_FILE:
                     o0 = check_output(command, stderr=NULL_FILE, shell=True)
             except CalledProcessError as e:
-                print (e.output)
+                logger.error (e.output)
                 return False
             o1 = [s.strip() for s in o0.split('\n')]
             if len(o1) < 6:
@@ -81,14 +82,79 @@ class DeploymentModule(module.AsyncModule):
     #Deployment File
     deployment_file = None
 
-    #Set to true to view tracebacks for exceptions
-    DEBUG = False
-
     def help(self):
         print(self.help_text)
         exit(0)
 
+    def copyFile(self, src, dst, buffer_size=10485760, perserveFileDate=True):
+        #    Check to make sure destination directory exists. If it doesn't create the directory
+        dstParent, dstFileName = os.path.split(dst)
+        if (not (os.path.exists(dstParent))):
+            os.makedirs(dstParent)
+
+        # Optimize the buffer for small files
+        buffer_size = min(buffer_size, os.path.getsize(src))
+        if (buffer_size == 0):
+            buffer_size = 1024
+
+        if shutil._samefile(src, dst):
+            raise shutil.Error("`%s` and `%s` are the same file" % (src, dst))
+        for fn in [src, dst]:
+            try:
+                st = os.stat(fn)
+            except OSError:
+                # File most likely does not exist
+                pass
+            else:
+                # XXX What about other special files? (sockets, devices...)
+                if shutil.stat.S_ISFIFO(st.st_mode):
+                    raise shutil.SpecialFileError("`%s` is a named pipe" % fn)
+        with open(src, 'rb') as fsrc:
+            with open(dst, 'wb') as fdst:
+                shutil.copyfileobj(fsrc, fdst, buffer_size)
+
+        if (perserveFileDate):
+            shutil.copystat(src, dst)
+
+
+    def copy_file_with_progress(self, src_file, dst_file):
+        # Get the size of the source file
+        total_size = os.path.getsize(src_file)
+
+        # Open the source file for reading in binary mode
+        with open(src_file, 'rb') as src:
+            # Open the destination file for writing in binary mode
+            with open(dst_file, 'wb') as dst:
+                # Create tqdm instance with total size of the file
+                with tqdm(total=total_size, unit='B', unit_scale=True, unit_divisor=1024,
+                          desc=f'Copying {os.path.basename(src_file)}') as pbar:
+                    # Read and write the file in chunks
+                    while True:
+                        # Read chunk of data from source file
+                        data = src.read(4096)
+                        if not data:
+                            break
+                        # Write chunk of data to destination file
+                        dst.write(data)
+                        # Update progress bar with size of chunk
+                        pbar.update(len(data))
+
+
+    def copy_dir_with_progress(self, src, dst):
+        total_size = sum(
+            os.path.getsize(os.path.join(root, filename)) for root, _, filenames in os.walk(src) for filename in
+            filenames)
+        with tqdm(total=total_size, unit='B', unit_scale=True, unit_divisor=1024, desc='Copying') as pbar:
+            for root, _, filenames in os.walk(src):
+                for filename in filenames:
+                    src_file = os.path.join(root, filename)
+                    dst_file = os.path.join(dst, os.path.relpath(src_file, src))
+                    os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                    shutil.copy(src_file, dst_file)
+                    pbar.update(os.path.getsize(src_file))
+
     def run(self,kwargs):
+        logger.debug("Running Deploy")
         try:
             with open(self.deployment_file) as f:
                 data = json.load(f)
@@ -96,10 +162,8 @@ class DeploymentModule(module.AsyncModule):
             print(HELPTEXT)
             sys.exit(1)
         except IOError as e:
-            if not self.DEBUG:
-                print("Unable to locate file: " + self.deployment_file)
-            else:
-                raise e
+            logger.error("Unable to locate file: " + self.deployment_file)
+            raise e
             sys.exit(1)
 
         fetchers = list()
@@ -143,7 +207,7 @@ class DeploymentModule(module.AsyncModule):
                 fetcher.dependency_unpack = unpack
                 fetcher.cache_root = self.cache_root
                 fetcher.keep_updated = keep_updated
-                fetcher.DEBUG = self.DEBUG
+                # fetcher.DEBUG = self.DEBUG
                 #TODO: Figure out how to move this out of deploy
                 try:
                     cache_dir =  os.path.join(fetcher.cache_root, fetcher.get_cache_name())
@@ -165,15 +229,12 @@ class DeploymentModule(module.AsyncModule):
                     try:
                         os.makedirs(destination)
                     except OSError as e:
-                        if(self.DEBUG):
-                            traceback.print_exc()
+                        logger.debug(f"{traceback.print_exc()}")
                         raise DeploymentError(fetcher.format_entry_name() + ": Error attempting to create destination directories.")
 
                 if fetcher.status == module.DONE and fetcher.exception is not None:
-                    if self.DEBUG:
-                        print (fetcher.exception.traceback)
-                    else:
-                        print (fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception))
+                    logger.debug (fetcher.exception.traceback)
+                    logger.error (fetcher.format_entry_name() + ": ERROR -- " + str(fetcher.exception))
                     exit_code = 1
                     fetcher.status = module.PROCESSED
                 if fetcher.status == module.DONE and fetcher.exception is None:
@@ -184,18 +245,18 @@ class DeploymentModule(module.AsyncModule):
 
                         # If the file exists, and points to the same target as the entry
                         if (os.path.exists(destination_file) and islink(destination_file) and state == fetch.EntryState.CACHE and os.path.realpath(entry) == os.path.realpath(destination_file)):
-                            print (fetcher.format_entry_name() + ": Already deployed.")
+                            logger.info(fetcher.format_entry_name() + ": Already deployed.")
                             fetcher.status = module.PROCESSED
                             break
 
                         # If the file exists, but something changed between the entry and the destination_file
                         elif (os.path.exists(destination_file) and (state == fetch.EntryState.UPDATED or state == fetch.EntryState.CACHE or state == fetch.EntryState.DOWNLOADED)):
-                            print (fetcher.format_entry_name() + ": Updating " + destination_file)
+                            logger.info(fetcher.format_entry_name() + ": Updating " + destination_file)
                             self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
 
                         # Wasn't in the cache, or updated.
                         else:
-                            print (fetcher.format_entry_name() + ": Deploying " + destination_file)
+                            logger.info(fetcher.format_entry_name() + ": Deploying " + destination_file)
                             self.__remove_and_deploy_to_destination__(fetcher, entry, destination_file)
                         #TODO: Kinda hacky, no significance other than to make it not DONE
                         fetcher.status = module.PROCESSED
@@ -216,22 +277,24 @@ class DeploymentModule(module.AsyncModule):
                 else:
                     os.unlink(destination_file)
             except OSError as e:
-                if(self.DEBUG):
-                    traceback.print_exc()
-                    raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
+                logger.debug(f"{traceback.print_exc()}")
+                raise DeploymentError(fetcher.format_entry_name() + ": Unable to remove previously deployed file: " + str(destination_file))
         try:
             if fetcher.dependency_is_link:
                 path.symlink(entry, destination_file)
             elif os.path.isdir(entry):
-                dir_util.copy_tree(entry, destination_file)
+                logger.debug("Copying with tree copy")
+                # dir_util.copy_tree(entry, destination_file)
+                # shutil.copytree(entry, destination_file, dirs_exist_ok=True)
+                self.copy_dir_with_progress(entry, destination_file)
             else:
-                shutil.copyfile(entry, destination_file)
-        except WindowsError as e:
-            if(self.DEBUG):
-                traceback.print_exc()
-                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
+                logger.debug("Copying with file copy")
+                self.copy_file_with_progress(entry, destination_file)
+                # self.copy_with_progress(entry, destination_file)
+        # except WindowsError as e:
+        #     logger.debug(f"{traceback.print_exc()}")
+        #     raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink. Ensure you are running Umpire as an administrator or otherwise enabled your user to create symlinks. Contact your system administrator if this problem persists.")
         except OSError as e:
-            if(self.DEBUG):
-                traceback.print_exc()
-                raise DeploymentError(fetcher.format_entry_name() + ": Unable to create symlink: " + str(e))
+            logger.debug(f"{traceback.print_exc()}")
+            raise DeploymentError(fetcher.format_entry_name() + ": Unable to deploy: " + str(e))
 

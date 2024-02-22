@@ -11,6 +11,8 @@ import maestro.core.module
 from . import unpack
 from maestro.tools.os_tools import check_pid
 from . import config
+import logging
+logger = logging.getLogger(__name__)
 
 # Cache constants
 CONFIG_FILENAME = config.CONFIG_FILENAME

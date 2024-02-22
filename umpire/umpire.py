@@ -1,6 +1,10 @@
 from maestro.core import execute
 from maestro.aws import s3
 from maestro.tools import path
+import logging
+import logging.handlers
+import logging.config
+import argparse
 
 __version__ = "0.5.5"
 
@@ -38,31 +42,55 @@ class Umpire(execute.ModuleExecuter):
 
     def run(self, kwargs):
 
-        for index, item in enumerate(sys.argv):
-            if index == 0:
-                continue
-            if item == "-c" or item == "--clear-cache":
-                import shutil
-                shutil.rmtree(get_umpire_root())
-                sys.exit(0)
-            elif item == "-r" or item == "--repair-cache":
-                path.purge(config.LOCK_FILENAME, get_umpire_root())
-                sys.exit(0)
-            elif item == "-h" or item == "--help":
-                print(deploy.HELPTEXT)
-                sys.exit(0)
-            elif item == "--version":
-                from subprocess import call
-                call(["pip3","show","umpire"])
-                sys.exit(0)
-            elif item == "-s" or item == "--skip-update":
-                self.skip_update = True
-            elif item == "-d" or item == "--debug":
-                self.debug = True
-            else:
-                self.deployment_file = item
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+        parser = argparse.ArgumentParser(description='Umpire reads a properly formatted JSON deployment file to deploy files.')
+        parser.add_argument('-c', '--clear-cache', help='Clear umpire cache', dest='clear', action='store_true', required=False)
+        parser.add_argument('-r', '--repair-cache', help='Removes lock files from the cache', dest='repair', action='store_true', required=False)
+        parser.add_argument('-v', '--version', help='Displays the current version of Umpire', dest='version',  action='store_true', required=False)
+        parser.add_argument('UMPIRE_FILE', help='Umpire json manifest file', nargs='?')
+        parser.add_argument('-d', '--debpug', help='Run without creating keys or updating keys', dest='debug', action='store_true',
+                            required=False)
+        args = parser.parse_args()
 
 
+        log_level = logging.INFO
+        if args.debug:
+            print('DEBUG logging requested')
+            log_level = logging.DEBUG
+            self.debug = True
+
+        logger = logging
+        FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+        logger.basicConfig(format=FORMAT, stream=sys.stdout, level=log_level)
+
+        if args.clear:
+            import shutil
+            logger.info("Clearing cache...")
+            shutil.rmtree(get_umpire_root())
+            logger.info("Completed")
+            sys.exit(0)
+
+        if args.repair:
+            logger.info("Repairing cache...")
+            path.purge(config.LOCK_FILENAME, get_umpire_root())
+            logger.info("Completed")
+            sys.exit(0)
+
+        if args.version:
+            from subprocess import call
+            call(["pip3","show","umpire"])
+            sys.exit(0)
+        # elif item == "-s" or item == "--skip-update":
+        #     self.skip_update = True
+
+
+        if args.UMPIRE_FILE:
+            self.deployment_file = args.UMPIRE_FILE
+        else:
+            parser.print_help()
+            sys.exit(0)
+        logger.info("Welcome!")
         self.register_dependencies()
         if not self.skip_update:
             updater = self.getObject("update")
@@ -72,17 +100,17 @@ class Umpire(execute.ModuleExecuter):
                     version = f.read()
                     rmajor, rminor, rrev = update.parse_version_string(version)
                     major, minor, rev = update.parse_version_string(__version__)
-                    print (str(rmajor) + str(rminor) + str(rrev))
-                    print (str(major) + str(minor) + str(rev))
+                    logger.info (str(rmajor) + str(rminor) + str(rrev))
+                    logger.info (str(major) + str(minor) + str(rev))
                     if (rmajor > major) or ((rminor > minor) and (rmajor == rmajor)) or ((rrev > rev) and (rminor == minor) and (rmajor == rmajor)):
                         if config.autoupdate:
-                            print("\n!!!Update (%s) detected!!!\n" % version[:-1])
-                            print("Autoupdating...\n")
+                            logger.info("\n!!!Update (%s) detected!!!\n" % version[:-1])
+                            logger.info("Autoupdating...\n")
                             updater.run({"update":None})
                             sys.exit(0)
                         else:
-                            print("!!!Update (%s) detected!!!" % version[:-1])
-                            print("Please run pip install umpire --upgrade as an Administrator.\n")
+                            logger.info("!!!Update (%s) detected!!!" % version[:-1])
+                            logger.info("Please run pip install umpire --upgrade as an Administrator.\n")
                             updater.start()
             except IOError:
                 updater.start()
@@ -108,7 +136,7 @@ def get_umpire_root():
             os.makedirs(config.default_umpire_root)
         return config.default_umpire_root
     except Exception as e:
-        print("Umpire: Error obtaining default umpire root location, using local directory './umpire_tmp': " + str(e), file=sys.stderr)
+        logging.error("Umpire: Error obtaining default umpire root location, using local directory './umpire_tmp': " + str(e), file=sys.stderr)
         if not os.path.exists(hardcoded_root):
             os.makedirs(hardcoded_root)
         return hardcoded_root
