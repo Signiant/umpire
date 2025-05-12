@@ -24,7 +24,6 @@ except NameError:
 
 
 import sys, os, json, time, traceback, shutil, logging
-from distutils import dir_util
 from maestro.core import module
 from maestro.tools import path
 from tqdm import tqdm
@@ -289,8 +288,6 @@ class DeploymentModule(module.AsyncModule):
                 path.symlink(entry, destination_file)
             elif os.path.isdir(entry):
                 logger.debug("Copying with tree copy")
-                # dir_util.copy_tree(entry, destination_file)
-                # shutil.copytree(entry, destination_file, dirs_exist_ok=True)
                 self.copy_dir_with_progress(entry, destination_file)
             else:
                 logger.debug("Copying with file copy")
